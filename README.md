@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TripSync
 
-## Getting Started
+Group trip-planning for a friend group — one link in the group chat instead of
+three hundred messages. Members mark the days they're free, set a **private**
+budget, and vote on region + vibe; TripSync ranks the date windows that
+actually work and suggests places to match.
 
-First, run the development server:
+No accounts: the owner gets a secret link, everyone else joins with a short code.
+
+## Stack
+
+Next.js (App Router, TypeScript) · Prisma · PostgreSQL · Tailwind CSS · Vercel.
+Google Places is mocked behind `lib/places/` — swapping in the real
+`googleProvider` later requires zero UI changes.
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env          # then fill in DATABASE_URL
+
+# Easiest local DB — Prisma's bundled Postgres:
+npx prisma dev                # prints a prisma+postgres:// URL for .env, keep it running
+
+npx prisma db push            # create tables (use db:migrate against a real Postgres)
+npm run db:seed               # demo trip with 5 members (prints join + owner links)
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the unit tests (availability engine, budget privacy, token generation):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment variables
 
-## Learn More
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection string. Local: the `prisma+postgres://` URL from `npx prisma dev`. Production: a Neon/Supabase `postgres://` URL (pooled). |
+| `GOOGLE_PLACES_API_KEY` | Reserved for the real Places provider. Unused while the mock provider is active. |
 
-To learn more about Next.js, take a look at the following resources:
+## Deploying to Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Create a Postgres database (Neon or Supabase) and copy the pooled connection string.
+2. `vercel` → set `DATABASE_URL` in Project Settings → Environment Variables.
+3. Run migrations against production: `DATABASE_URL=... npx prisma migrate deploy`.
+4. Deploy. `npm run build` runs `prisma generate` automatically.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## The two links (never conflate them)
 
-## Deploy on Vercel
+- **Join link** `/join/{code}` — safe to paste in the group chat.
+- **Owner link** `/trip/{id}?owner={token}` — the only way into the owner view
+  (individual budgets). Shown once at creation; treat it like a password.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Privacy model
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Individual budget amounts are returned **only** on the owner-verified path.
+Every group-facing surface gets aggregate tiers/counts from `lib/budget.ts`,
+and below 3 submitted budgets all signal is suppressed (`INSUFFICIENT_DATA`)
+so nobody's number can be inferred. Enforced at the data layer and covered by
+unit tests.

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="">
+<rect width="96" height="96" fill="#14312B"/>
+<path d="M-4 25 C 24 8.5, 48 44.5, 100 19" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 35 C 24 19, 48 56, 100 29" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 51 C 24 31, 48 70, 100 45" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 70 C 24 46, 48 89.5, 100 64" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M29 61 C 43 71, 35 87, 49 95" fill="none" stroke="#E8A33D" stroke-width="2" stroke-dasharray="4 3"/>
+<circle cx="29" cy="61" r="4" fill="#E8A33D"/>
+<circle cx="49" cy="95" r="3" fill="#F6F3ED"/>
+<text x="12" y="84" font-family="monospace" font-size="13" fill="#F6F3ED" fill-opacity="0.85">F</text>
+</svg>

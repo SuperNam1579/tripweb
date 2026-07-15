@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="">
+<rect width="96" height="96" fill="#14312B"/>
+<path d="M-4 17 C 24 13.5, 48 49.5, 100 11" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 32 C 24 34.5, 48 72.5, 100 26" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 48 C 24 45.5, 48 78.5, 100 42" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 59 C 24 57.5, 48 89, 100 53" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M41 -2 C 55 8, 47 24, 61 32" fill="none" stroke="#E8A33D" stroke-width="2" stroke-dasharray="4 3"/>
+<circle cx="41" cy="-2" r="4" fill="#E8A33D"/>
+<circle cx="61" cy="32" r="3" fill="#F6F3ED"/>
+<text x="12" y="84" font-family="monospace" font-size="13" fill="#F6F3ED" fill-opacity="0.85">P</text>
+</svg>

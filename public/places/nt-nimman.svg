@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="">
+<rect width="96" height="96" fill="#14312B"/>
+<path d="M-4 24 C 24 4, 48 40, 100 18" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 35 C 24 11, 48 54, 100 29" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 57 C 24 36, 48 71.5, 100 51" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M-4 71 C 24 52.5, 48 89, 100 65" fill="none" stroke="#3E7A6E" stroke-opacity="0.45" stroke-width="1.5"/>
+<path d="M64 57 C 78 67, 70 83, 84 91" fill="none" stroke="#E8A33D" stroke-width="2" stroke-dasharray="4 3"/>
+<circle cx="64" cy="57" r="4" fill="#E8A33D"/>
+<circle cx="84" cy="91" r="3" fill="#F6F3ED"/>
+<text x="12" y="84" font-family="monospace" font-size="13" fill="#F6F3ED" fill-opacity="0.85">N</text>
+</svg>
