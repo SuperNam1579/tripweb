@@ -11,6 +11,7 @@ import {
   memberCookieName,
   ownerCookieName,
 } from "@/lib/auth";
+import { CREW_COLOR_KEYS } from "@/lib/crew";
 import { DATE_KEY_RE, daySpan, fromDateKey, toDateKey } from "@/lib/dates";
 import { prisma } from "@/lib/db";
 import {
@@ -20,6 +21,10 @@ import {
 } from "@/lib/tokens";
 import { ACTIVITY_OPTIONS, REGION_OPTIONS } from "@/lib/votes";
 
+const crewColorField = z
+  .string()
+  .refine((v) => CREW_COLOR_KEYS.includes(v), "Pick a colour from the list.");
+
 export type ActionState = { error?: string } | null;
 
 /* ————————————————— Create trip ————————————————— */
@@ -27,6 +32,8 @@ export type ActionState = { error?: string } | null;
 const createTripSchema = z
   .object({
     name: z.string().trim().min(1, "Give the trip a name.").max(80, "Keep the name under 80 characters."),
+    yourName: z.string().trim().min(1, "Tell the group your name.").max(40, "Keep the name under 40 characters."),
+    color: crewColorField,
     durationDays: z.coerce.number().int().min(1, "The trip needs at least 1 day.").max(30, "Keep it under 30 days."),
     windowStart: z.string().regex(DATE_KEY_RE, "Pick a start date."),
     windowEnd: z.string().regex(DATE_KEY_RE, "Pick an end date."),
@@ -50,6 +57,8 @@ export async function createTrip(
 ): Promise<ActionState> {
   const parsed = createTripSchema.safeParse({
     name: formData.get("name"),
+    yourName: formData.get("yourName"),
+    color: formData.get("color"),
     durationDays: formData.get("durationDays"),
     windowStart: formData.get("windowStart"),
     windowEnd: formData.get("windowEnd"),
@@ -57,7 +66,7 @@ export async function createTrip(
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
-  const { name, durationDays, windowStart, windowEnd } = parsed.data;
+  const { name, yourName, color, durationDays, windowStart, windowEnd } = parsed.data;
 
   const ownerToken = generateOwnerToken();
 
@@ -81,8 +90,16 @@ export async function createTrip(
   }
   if (!trip) return { error: "Could not create the trip. Try again." };
 
+  // The creator is also the first member — no separate "join your own trip"
+  // step. Owner and member sessions are still tracked independently.
+  const memberToken = generateMemberToken();
+  await prisma.member.create({
+    data: { tripId: trip.id, displayName: yourName, memberToken, color },
+  });
+
   const store = await cookies();
   store.set(ownerCookieName(trip.id), ownerToken, cookieOptions);
+  store.set(memberCookieName(trip.id), memberToken, cookieOptions);
 
   redirect(`/trip/${trip.id}?owner=${ownerToken}&created=1`);
 }
@@ -101,6 +118,7 @@ function isUniqueViolation(e: unknown): boolean {
 const joinSchema = z.object({
   joinCode: z.string().trim().toUpperCase().min(6).max(8),
   displayName: z.string().trim().min(1, "Tell the group your name.").max(40, "Keep the name under 40 characters."),
+  color: crewColorField,
 });
 
 export async function joinTrip(
@@ -110,11 +128,12 @@ export async function joinTrip(
   const parsed = joinSchema.safeParse({
     joinCode: formData.get("joinCode"),
     displayName: formData.get("displayName"),
+    color: formData.get("color"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
-  const { joinCode, displayName } = parsed.data;
+  const { joinCode, displayName, color } = parsed.data;
 
   const trip = await prisma.trip.findUnique({ where: { joinCode } });
   if (!trip) {
@@ -125,9 +144,16 @@ export async function joinTrip(
   const existing = await getMember(trip.id);
   if (!existing) {
     const memberToken = generateMemberToken();
-    await prisma.member.create({
-      data: { tripId: trip.id, displayName, memberToken },
-    });
+    try {
+      await prisma.member.create({
+        data: { tripId: trip.id, displayName, memberToken, color },
+      });
+    } catch (e) {
+      if (isUniqueViolation(e)) {
+        return { error: "Someone just picked that colour. Choose another one." };
+      }
+      throw e;
+    }
     const store = await cookies();
     store.set(memberCookieName(trip.id), memberToken, cookieOptions);
   }
@@ -195,29 +221,38 @@ export async function saveAvailability(
 
 /* ————————————————— Budget ————————————————— */
 
-const budgetSchema = z.object({
-  amount: z.coerce
-    .number()
-    .int("Whole baht only.")
-    .min(1, "Enter your budget in THB.")
-    .max(1_000_000, "That budget is over 1,000,000 THB — enter a realistic number."),
-});
+const budgetAmount = z.coerce
+  .number()
+  .int("Whole baht only.")
+  .min(1, "Enter a budget in THB.")
+  .max(1_000_000, "That budget is over 1,000,000 THB — enter a realistic number.");
+
+const budgetSchema = z
+  .object({ amount: budgetAmount, amountMax: budgetAmount })
+  .refine((v) => v.amountMax >= v.amount, {
+    message: "The top of the range has to be at least the bottom.",
+    path: ["amountMax"],
+  });
 
 export async function saveBudget(
   tripId: string,
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const parsed = budgetSchema.safeParse({ amount: formData.get("amount") });
+  const parsed = budgetSchema.safeParse({
+    amount: formData.get("amount"),
+    amountMax: formData.get("amountMax"),
+  });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { amount, amountMax } = parsed.data;
 
   const member = await getMember(tripId);
   if (!member) return { error: "Your session expired. Open the join link again." };
 
   await prisma.budget.upsert({
     where: { memberId: member.id },
-    create: { tripId, memberId: member.id, amount: parsed.data.amount },
-    update: { amount: parsed.data.amount },
+    create: { tripId, memberId: member.id, amount, amountMax },
+    update: { amount, amountMax },
   });
 
   revalidatePath(`/trip/${tripId}`, "layout");

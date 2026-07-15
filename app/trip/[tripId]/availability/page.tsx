@@ -16,7 +16,9 @@ export default async function AvailabilityPage({
   if (!trip) {
     return (
       <Shell tripId={tripId}>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Trip not found</h1>
+        <div className="panel" style={{ padding: 28 }}>
+          <h1 className="text-3xl font-bold">ไม่พบทริปนี้</h1>
+        </div>
       </Shell>
     );
   }
@@ -24,11 +26,12 @@ export default async function AvailabilityPage({
   if (!member) {
     return (
       <Shell tripId={tripId}>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Join first</h1>
-        <p className="mt-3 text-ink/80">
-          Marking days is for trip members. Open the join link from the group
-          chat, enter your name, and come back here.
-        </p>
+        <div className="panel" style={{ padding: 28 }}>
+          <h1 className="text-3xl font-bold">เข้าร่วมก่อนนะ</h1>
+          <p className="mt-3 text-[#B7C4DA]">
+            มาร์กวันได้เฉพาะสมาชิกทริป เปิดลิงก์เข้าร่วมจากกลุ่มแชท ใส่ชื่อ แล้วกลับมาที่นี่
+          </p>
+        </div>
       </Shell>
     );
   }
@@ -40,14 +43,15 @@ export default async function AvailabilityPage({
 
   return (
     <Shell tripId={tripId}>
-      <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold tracking-tight">
-          Mark the days you&apos;re free
+      <header className="mb-5">
+        <span className="pill pill-cyan">Task 02</span>
+        <h1
+          className="mt-3.5 font-bold text-[#F4F8FF]"
+          style={{ fontSize: "clamp(28px,5vw,42px)", lineHeight: 1.05, textShadow: "0 1px 8px rgba(0,0,0,.4)" }}
+        >
+          มาร์กวันที่คุณว่าง
         </h1>
-        <p className="mt-2 text-ink/80">
-          Tap a day, or drag across a run of days. Anything you don&apos;t mark
-          counts as busy.
-        </p>
+        <p className="m-0 text-[#93A2BC]">แตะวันที่ไปได้ (หรือลากทีเดียวหลายวัน) — ระบบหาช่วงที่ทุกคนตรงกันให้</p>
       </header>
       <AvailabilityCalendar
         tripId={tripId}
@@ -61,12 +65,9 @@ export default async function AvailabilityPage({
 
 function Shell({ tripId, children }: { tripId: string; children: React.ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-5 py-8 sm:py-12">
-      <Link
-        href={`/trip/${tripId}`}
-        className="mb-6 inline-block font-mono text-xs uppercase tracking-widest text-teal hover:underline"
-      >
-        ← Back to the trip
+    <main className="mx-auto w-full max-w-[580px] flex-1 px-6 pb-28 pt-10">
+      <Link href={`/trip/${tripId}`} className="mb-5 inline-block text-sm text-cyan hover:underline">
+        ← กลับลอบบี้
       </Link>
       {children}
     </main>

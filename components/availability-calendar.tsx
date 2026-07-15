@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { saveAvailability } from "@/app/actions";
+import { Toast } from "@/components/toast";
 import { eachDay, fromDateKey } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +10,7 @@ const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-const WEEKDAY_HEADER = ["M", "T", "W", "T", "F", "S", "S"];
+const WEEKDAY_HEADER = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
 
 interface MonthBlock {
   label: string;
@@ -25,7 +26,7 @@ function buildMonths(windowStart: string, windowEnd: string): MonthBlock[] {
     if (!byMonth.has(m)) byMonth.set(m, []);
     byMonth.get(m)!.push(d);
   }
-  return [...byMonth.entries()].map(([month, monthDays]) => {
+  return [...byMonth.entries()].map(([, monthDays]) => {
     const first = fromDateKey(monthDays[0]);
     const mondayFirst = (first.getUTCDay() + 6) % 7;
     return {
@@ -50,6 +51,7 @@ export function AvailabilityCalendar({
   const [free, setFree] = useState<Set<string>>(() => new Set(initialFree));
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -97,37 +99,34 @@ export function AvailabilityCalendar({
       } else {
         setDirty(false);
         setSaved(true);
+        setShowToast(true);
       }
     });
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <div
-        className="flex flex-col gap-6 touch-none select-none"
+        className="flex touch-none select-none flex-col gap-6"
         onPointerMove={onPointerMove}
         onPointerUp={endPaint}
         onPointerLeave={endPaint}
         onPointerCancel={endPaint}
       >
         {months.map((month) => (
-          <section key={month.label} aria-label={month.label}>
-            <h3 className="mb-2 font-display text-base font-semibold tracking-tight">
-              {month.label}
-            </h3>
-            <div className="grid grid-cols-7 gap-1">
+          <section key={month.label} aria-label={month.label} className="panel" style={{ padding: 20 }}>
+            <h3 className="mb-3.5 text-lg font-semibold text-[#EEF3FB]">{month.label}</h3>
+            <div className="mb-1.5 grid grid-cols-7 gap-1.5">
               {WEEKDAY_HEADER.map((w, i) => (
-                <span
-                  key={`${w}-${i}`}
-                  aria-hidden
-                  className="pb-1 text-center font-mono text-[10px] uppercase text-slate"
-                >
+                <span key={`${w}-${i}`} aria-hidden className="pb-1 text-center text-xs text-[#5E6E88]">
                   {w}
                 </span>
               ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1.5">
               {month.cells.map((date, i) =>
                 date === null ? (
-                  <span key={`blank-${i}`} />
+                  <span key={`blank-${i}`} className="h-[46px]" />
                 ) : (
                   <button
                     key={date}
@@ -136,12 +135,18 @@ export function AvailabilityCalendar({
                     aria-pressed={free.has(date)}
                     aria-label={date}
                     onPointerDown={(e) => onPointerDown(e, date)}
-                    className={cn(
-                      "flex h-10 items-center justify-center rounded-md border font-mono text-sm tabular-nums",
+                    className="flex h-[46px] items-center justify-center rounded-xl text-base font-semibold tabular-nums"
+                    style={
                       free.has(date)
-                        ? "border-signal bg-signal font-semibold text-ink"
-                        : "border-border bg-card text-ink/70 hover:border-slate",
-                    )}
+                        ? {
+                            background:
+                              "linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 50%),#38FEDC",
+                            border: "3px solid #05070D",
+                            color: "#062B27",
+                            boxShadow: "0 4px 0 #1C9E9C",
+                          }
+                        : { background: "#151F33", border: "3px solid #0C1220", color: "#8EA0BC" }
+                    }
                   >
                     {Number(date.slice(8, 10))}
                   </button>
@@ -153,24 +158,28 @@ export function AvailabilityCalendar({
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-xl px-3.5 py-2.5 text-sm text-[#FFB4B4]"
+          style={{ background: "rgba(226,58,58,.12)", border: "2px solid rgba(226,58,58,.4)" }}
+        >
           {error}
         </p>
       ) : null}
 
-      <div className="sticky bottom-4 flex items-center gap-3">
+      <div className="sticky bottom-4 flex items-center gap-3.5">
         <button
           type="button"
           onClick={save}
           disabled={pending || (!dirty && !saved)}
-          className="h-12 flex-1 rounded-md bg-signal px-6 font-display text-base font-semibold text-ink shadow-sm hover:brightness-95 disabled:opacity-60"
+          className={cn("btn h-14 flex-1 text-[18px]", saved && !dirty ? "btn-green" : "btn-cyan")}
         >
-          {pending ? "Saving…" : saved && !dirty ? "Saved ✓" : "Save my free days"}
+          {pending ? "กำลังบันทึก…" : saved && !dirty ? "บันทึกแล้ว ✓" : "บันทึกวันว่าง ✓"}
         </button>
-        <span className="font-mono text-sm tabular-nums text-slate">
-          {free.size} {free.size === 1 ? "day" : "days"}
-        </span>
+        <span className="text-[17px] tabular-nums text-[#C6D2E6]">{free.size} วัน</span>
       </div>
+
+      <Toast open={showToast} message="บันทึกวันว่างแล้ว ✓" onClose={() => setShowToast(false)} />
     </div>
   );
 }

@@ -15,11 +15,12 @@ export default async function VotesPage({
   if (!member) {
     return (
       <Shell tripId={tripId}>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Join first</h1>
-        <p className="mt-3 text-ink/80">
-          Voting is for trip members. Open the join link from the group chat,
-          enter your name, and come back here.
-        </p>
+        <div className="panel" style={{ padding: 28 }}>
+          <h1 className="text-3xl font-bold">เข้าร่วมก่อนนะ</h1>
+          <p className="mt-3 text-[#B7C4DA]">
+            โหวตได้เฉพาะสมาชิกทริป เปิดลิงก์เข้าร่วมจากกลุ่มแชท ใส่ชื่อ แล้วกลับมาที่นี่
+          </p>
+        </div>
       </Shell>
     );
   }
@@ -36,32 +37,30 @@ export default async function VotesPage({
       category,
       title,
       options,
-      myVote:
-        votes.find((v) => v.category === category && v.memberId === member!.id)
-          ?.value ?? null,
-      counts: Object.fromEntries(
-        tallyVotes(values, options).map((t) => [t.value, t.count]),
-      ),
+      myVote: votes.find((v) => v.category === category && v.memberId === member!.id)?.value ?? null,
+      counts: Object.fromEntries(tallyVotes(values, options).map((t) => [t.value, t.count])),
     };
   }
 
   return (
     <Shell tripId={tripId}>
-      <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold tracking-tight">
-          Where should this trip go?
+      <header className="mb-6 text-center">
+        <span className="pill pill-red">Emergency Meeting</span>
+        <h1
+          className="mt-4 font-bold text-[#F4F8FF]"
+          style={{ fontSize: "clamp(28px,5vw,42px)", lineHeight: 1.05, textShadow: "0 1px 8px rgba(0,0,0,.4)" }}
+        >
+          โหวตภูมิภาค &amp; สไตล์
         </h1>
-        <p className="mt-2 text-ink/80">
-          One vote per question. Change your mind any time — your new pick
-          replaces the old one.
-        </p>
+        <p className="m-0 text-[#93A2BC]">เลือกอย่างละหนึ่ง — ดูได้เลยว่าทีมเอนไปทางไหน</p>
       </header>
 
       <VoteBallot
         tripId={tripId}
+        resultsHref={`/trip/${tripId}/results`}
         categories={[
-          build("REGION", "Which part of Thailand?", REGION_OPTIONS),
-          build("ACTIVITY", "What's the vibe?", ACTIVITY_OPTIONS),
+          build("REGION", "ภูมิภาค", REGION_OPTIONS),
+          build("ACTIVITY", "สไตล์ทริป", ACTIVITY_OPTIONS),
         ]}
       />
     </Shell>
@@ -70,12 +69,9 @@ export default async function VotesPage({
 
 function Shell({ tripId, children }: { tripId: string; children: React.ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-5 py-8 sm:py-12">
-      <Link
-        href={`/trip/${tripId}`}
-        className="mb-6 inline-block font-mono text-xs uppercase tracking-widest text-teal hover:underline"
-      >
-        ← Back to the trip
+    <main className="mx-auto w-full max-w-[620px] flex-1 px-6 pb-24 pt-10">
+      <Link href={`/trip/${tripId}`} className="mb-5 inline-block text-sm text-cyan hover:underline">
+        ← กลับลอบบี้
       </Link>
       {children}
     </main>

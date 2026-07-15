@@ -28,6 +28,8 @@ model Member {
   tripId       String
   displayName  String
   memberToken  String   @unique
+  /** Crewmate colour key (see lib/crew.ts palette). Unique per trip so no two members clash. */
+  color        String?
   joinedAt     DateTime @default(now())
   trip         Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
   availability Availability[]
@@ -35,6 +37,7 @@ model Member {
   votes        Vote[]
 
   @@index([tripId])
+  @@unique([tripId, color])
 }
 
 model Availability {
@@ -54,7 +57,10 @@ model Budget {
   id       String @id @default(cuid())
   tripId   String
   memberId String @unique
-  amount   Int
+  /** Minimum of the member's budget range. */
+  amount    Int
+  /** Maximum of the range. Nullable on legacy single-value rows — treat as == amount. */
+  amountMax Int?
   trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
   member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }

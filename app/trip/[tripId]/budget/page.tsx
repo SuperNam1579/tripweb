@@ -15,11 +15,12 @@ export default async function BudgetPage({
   if (!member) {
     return (
       <Shell tripId={tripId}>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Join first</h1>
-        <p className="mt-3 text-ink/80">
-          Budgets are for trip members. Open the join link from the group chat,
-          enter your name, and come back here.
-        </p>
+        <div className="panel" style={{ padding: 28 }}>
+          <h1 className="text-3xl font-bold">เข้าร่วมก่อนนะ</h1>
+          <p className="mt-3 text-[#B7C4DA]">
+            ตั้งงบได้เฉพาะสมาชิกทริป เปิดลิงก์เข้าร่วมจากกลุ่มแชท ใส่ชื่อ แล้วกลับมาที่นี่
+          </p>
+        </div>
       </Shell>
     );
   }
@@ -34,31 +35,43 @@ export default async function BudgetPage({
 
   return (
     <Shell tripId={tripId}>
-      <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold tracking-tight">
-          Save my budget
+      <header className="mb-5">
+        <span className="pill pill-sun">Task 03</span>
+        <h1
+          className="mt-3.5 font-bold text-[#F4F8FF]"
+          style={{ fontSize: "clamp(28px,5vw,42px)", lineHeight: 1.05, textShadow: "0 1px 8px rgba(0,0,0,.4)" }}
+        >
+          ตั้งงบของคุณ
         </h1>
-        <p className="mt-2 text-ink/80">
-          Only the trip owner ever sees your number. The group sees totals like
-          &ldquo;4 of 6 submitted&rdquo; — never amounts, never names.
+        <p className="m-0 text-[#93A2BC]">
+          ช่วงงบต่อคนสำหรับทั้งทริป — <strong className="text-sun">เป็นความลับ</strong> ไม่มีใครในทีมเห็น
         </p>
       </header>
 
-      <div className="rounded-lg border border-border bg-card p-5">
-        <BudgetForm tripId={tripId} initialAmount={myBudget?.amount ?? null} />
+      <div className="panel" style={{ padding: 28 }}>
+        <BudgetForm
+          tripId={tripId}
+          initialAmount={myBudget?.amount ?? null}
+          initialAmountMax={myBudget?.amountMax ?? null}
+        />
       </div>
 
-      <section className="mt-6 rounded-lg border border-dashed border-border bg-card/60 p-5">
-        <h2 className="font-mono text-xs uppercase tracking-widest text-slate">
-          Group status
-        </h2>
-        <p className="mt-2 font-mono text-lg tabular-nums">
-          {view.submittedCount} of {view.totalMembers} budgets in
-        </p>
-        <p className="mt-1 text-sm text-slate">
-          {view.hasSignal
-            ? "Budget fit now shows on place recommendations."
-            : `Budget signals unlock at ${MIN_BUDGETS_FOR_SIGNAL} submissions, so no one's number can be guessed.`}
+      <section
+        className="mt-5 flex items-start gap-3"
+        style={{ background: "rgba(56,254,220,.06)", border: "2px solid rgba(56,254,220,.25)", borderRadius: 15, padding: "16px 18px" }}
+      >
+        <span
+          aria-hidden
+          className="mt-1.5 h-2.5 w-2.5 flex-none rounded-full bg-cyan"
+          style={{ boxShadow: "0 0 8px rgba(56,254,220,.6)" }}
+        />
+        <p className="m-0 text-sm text-[#B7C4DA]">
+          ทีมเห็นแค่ค่ากลาง (median) และเริ่มโชว์เมื่อมีคนกรอกครบ {MIN_BUDGETS_FOR_SIGNAL} คนขึ้นไป —
+          ต่ำกว่านั้นซ่อนหมด เดาเลขใครไม่ได้.{" "}
+          <span className="tabular-nums text-star">
+            ตอนนี้ {view.submittedCount} จาก {view.totalMembers} คน
+          </span>
+          {view.hasSignal ? " — สัญญาณงบเปิดใช้แล้วในหน้าแนะนำที่เที่ยว" : ""}
         </p>
       </section>
     </Shell>
@@ -67,12 +80,9 @@ export default async function BudgetPage({
 
 function Shell({ tripId, children }: { tripId: string; children: React.ReactNode }) {
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-5 py-8 sm:py-12">
-      <Link
-        href={`/trip/${tripId}`}
-        className="mb-6 inline-block font-mono text-xs uppercase tracking-widest text-teal hover:underline"
-      >
-        ← Back to the trip
+    <main className="mx-auto w-full max-w-[580px] flex-1 px-6 pb-24 pt-10">
+      <Link href={`/trip/${tripId}`} className="mb-5 inline-block text-sm text-cyan hover:underline">
+        ← กลับลอบบี้
       </Link>
       {children}
     </main>

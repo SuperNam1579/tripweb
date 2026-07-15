@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { JoinForm } from "@/components/join-form";
 import { getMember } from "@/lib/auth";
@@ -17,14 +18,19 @@ export default async function JoinPage({
 
   if (!trip) {
     return (
-      <main className="mx-auto w-full max-w-lg flex-1 px-5 py-16">
-        <h1 className="font-display text-3xl font-bold tracking-tight">
-          That link doesn&apos;t go anywhere
-        </h1>
-        <p className="mt-3 text-ink/80">
-          The join code <span className="font-mono">{joinCode}</span> doesn&apos;t
-          match any trip. Ask whoever shared it to paste the join link again.
-        </p>
+      <main className="mx-auto w-full max-w-[620px] flex-1 px-6 py-16">
+        <Link href="/join" className="mb-6 inline-block text-sm text-cyan hover:underline">
+          ← ลองใส่โค้ดอีกครั้ง
+        </Link>
+        <div className="panel" style={{ padding: 28 }}>
+          <h1 className="font-bold" style={{ fontSize: "clamp(26px,5vw,36px)" }}>
+            ลิงก์นี้ไม่เจอทริป
+          </h1>
+          <p className="mt-3 text-[#B7C4DA]">
+            โค้ด <span className="text-sun" style={{ letterSpacing: ".18em" }}>{joinCode}</span>{" "}
+            ไม่ตรงกับทริปไหนเลย ลองขอลิงก์เข้าร่วมจากเพื่อนอีกที
+          </p>
+        </div>
       </main>
     );
   }
@@ -33,28 +39,36 @@ export default async function JoinPage({
   const member = await getMember(trip.id);
   if (member) redirect(`/trip/${trip.id}`);
 
-  return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-5 py-10 sm:py-16">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-teal">
-        You&apos;re invited
-      </p>
-      <h1 className="mt-3 font-display text-4xl font-bold leading-tight tracking-tight">
-        {trip.name}
-      </h1>
-      <p className="mt-3 text-ink/80">
-        <span className="font-mono tabular-nums">{trip.durationDays}</span> days,
-        sometime between{" "}
-        <span className="font-mono">{formatShort(toDateKey(trip.windowStart))}</span> and{" "}
-        <span className="font-mono">{formatShort(toDateKey(trip.windowEnd))}</span>.{" "}
-        <span className="font-mono tabular-nums">{trip._count.members}</span>{" "}
-        {trip._count.members === 1 ? "person is" : "people are"} in so far.
-      </p>
+  const takenColors = (
+    await prisma.member.findMany({
+      where: { tripId: trip.id, color: { not: null } },
+      select: { color: true },
+    })
+  ).map((m) => m.color!);
 
-      <div className="mt-8 rounded-lg border border-border bg-card p-5 sm:p-6">
-        <JoinForm joinCode={trip.joinCode} />
-        <p className="mt-4 text-sm text-slate">
-          No password, no sign-up. Your budget stays private — the group only
-          ever sees totals.
+  return (
+    <main className="mx-auto w-full max-w-[620px] flex-1 px-6 pb-20 pt-11">
+      <Link href="/" className="mb-6 inline-block text-sm text-cyan hover:underline">
+        ← กลับหน้าแรก
+      </Link>
+      <div className="reveal text-center">
+        <span className="pill pill-cyan">You&apos;re invited</span>
+        <h1
+          className="mt-4 font-bold text-[#F4F8FF]"
+          style={{ fontSize: "clamp(30px,5vw,44px)", lineHeight: 1.08, textShadow: "0 1px 8px rgba(0,0,0,.4)" }}
+        >
+          {trip.name}
+        </h1>
+        <p className="m-0 text-[#93A2BC]">
+          {trip.durationDays} วัน · {formatShort(toDateKey(trip.windowStart))} – {formatShort(toDateKey(trip.windowEnd))} ·{" "}
+          {trip._count.members} คนในลอบบี้
+        </p>
+      </div>
+
+      <div className="panel mt-6" style={{ padding: 28 }}>
+        <JoinForm joinCode={trip.joinCode} takenColors={takenColors} />
+        <p className="mt-4 text-center text-[13px] text-fog">
+          ไม่ต้องรหัสผ่าน · งบของคุณเป็นความลับ กลุ่มเห็นแค่ยอดรวม
         </p>
       </div>
     </main>

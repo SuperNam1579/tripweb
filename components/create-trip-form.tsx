@@ -2,11 +2,8 @@
 
 import { useActionState } from "react";
 import { createTrip } from "@/app/actions";
+import { CrewColorPicker } from "@/components/crew-color-picker";
 import { toDateKey } from "@/lib/dates";
-
-const inputCls =
-  "h-11 w-full rounded-md border border-border bg-card px-3 text-base text-ink placeholder:text-slate";
-const labelCls = "block text-sm font-medium mb-1.5";
 
 export function CreateTripForm() {
   const [state, action, pending] = useActionState(createTrip, null);
@@ -18,10 +15,10 @@ export function CreateTripForm() {
   inTwoMonths.setDate(inTwoMonths.getDate() + 75);
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="flex flex-col gap-[22px]">
       <div>
-        <label htmlFor="name" className={labelCls}>
-          Trip name
+        <label htmlFor="name" className="label">
+          ชื่อทริป
         </label>
         <input
           id="name"
@@ -29,30 +26,56 @@ export function CreateTripForm() {
           required
           maxLength={80}
           placeholder="เที่ยวเชียงใหม่ with the gang"
-          className={inputCls}
+          className="field"
         />
       </div>
 
       <div>
-        <label htmlFor="durationDays" className={labelCls}>
-          How many days?
+        <label htmlFor="yourName" className="label">
+          ชื่อของคุณ
         </label>
         <input
-          id="durationDays"
-          name="durationDays"
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={30}
-          defaultValue={3}
+          id="yourName"
+          name="yourName"
           required
-          className={`${inputCls} font-mono w-28`}
+          maxLength={40}
+          autoComplete="nickname"
+          placeholder="เช่น ต้น / Bam"
+          className="field"
         />
+        <p className="mt-1.5 text-xs text-fog">คุณจะเข้าลอบบี้เป็นสมาชิกคนแรกทันที มาร์กวันว่างของตัวเองได้เลย</p>
       </div>
 
-      <fieldset>
-        <legend className={labelCls}>Look for dates between</legend>
-        <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="label">เลือกสีตัวละคร</label>
+        <div className="panel-flat" style={{ padding: 18 }}>
+          <CrewColorPicker />
+        </div>
+      </div>
+
+      <div className="grid items-end gap-5 sm:grid-cols-[150px_1fr]">
+        <div>
+          <label htmlFor="durationDays" className="label">
+            กี่วัน
+          </label>
+          <input
+            id="durationDays"
+            name="durationDays"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={30}
+            defaultValue={3}
+            required
+            className="field text-[20px]"
+          />
+        </div>
+        <p className="m-0 pb-3.5 text-sm text-fog">เช่น ทริปสุดสัปดาห์ = 3 วัน</p>
+      </div>
+
+      <fieldset className="m-0 border-0 p-0">
+        <legend className="label p-0">หาวันในช่วง</legend>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="windowStart" className="sr-only">
               Earliest date
@@ -63,7 +86,7 @@ export function CreateTripForm() {
               type="date"
               required
               defaultValue={toDateKey(inMonth)}
-              className={`${inputCls} font-mono`}
+              className="field text-[15px]"
             />
           </div>
           <div>
@@ -76,24 +99,24 @@ export function CreateTripForm() {
               type="date"
               required
               defaultValue={toDateKey(inTwoMonths)}
-              className={`${inputCls} font-mono`}
+              className="field text-[15px]"
             />
           </div>
         </div>
       </fieldset>
 
       {state?.error ? (
-        <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-xl px-3.5 py-2.5 text-sm text-[#FFB4B4]"
+          style={{ background: "rgba(226,58,58,.12)", border: "2px solid rgba(226,58,58,.4)" }}
+        >
           {state.error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="h-12 rounded-md bg-signal px-6 font-display text-base font-semibold text-ink hover:brightness-95 disabled:opacity-60"
-      >
-        {pending ? "Creating…" : "Create the trip"}
+      <button type="submit" disabled={pending} className="btn btn-green mt-1.5 self-start px-8 py-4 text-[18px]">
+        {pending ? "กำลังสร้าง…" : "สร้างห้อง →"}
       </button>
     </form>
   );

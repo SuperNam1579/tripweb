@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { ClaimOwner } from "@/components/claim-owner";
 import { CopyButton } from "@/components/copy-button";
-import { RouteLine, type RouteStop } from "@/components/route-line";
+import { Crewmate } from "@/components/crewmate";
+import { JoinCodeBadge } from "@/components/join-code-badge";
+import { RememberTrip } from "@/components/remember-trip";
+import { RosterRow } from "@/components/roster-row";
+import { TaskList, type RouteStop } from "@/components/route-line";
 import { getMember, getOwnerTrip } from "@/lib/auth";
 import { median } from "@/lib/budget";
+import { crewRoster, resolveCrewColor } from "@/lib/crew";
 import { formatShort, toDateKey } from "@/lib/dates";
 import { prisma } from "@/lib/db";
 
@@ -38,10 +43,10 @@ export default async function TripPage({
   if (!trip) {
     return (
       <Shell>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Trip not found</h1>
-        <p className="mt-3 text-ink/80">
-          This trip may have been deleted, or the link is wrong.
-        </p>
+        <div className="panel" style={{ padding: 28 }}>
+          <h1 className="text-3xl font-bold">ไม่พบทริปนี้</h1>
+          <p className="mt-3 text-[#B7C4DA]">ทริปนี้อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง</p>
+        </div>
       </Shell>
     );
   }
@@ -49,35 +54,45 @@ export default async function TripPage({
   if (!ownerTrip && !member) {
     return (
       <Shell>
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-teal">TripSync</p>
-        <h1 className="mt-3 font-display text-3xl font-bold tracking-tight">{trip.name}</h1>
-        <p className="mt-3 text-ink/80">
-          You&apos;re not in this trip on this device yet. Ask the group for the{" "}
-          <strong>join link</strong> and open it — that&apos;s all it takes.
-        </p>
+        <div className="panel" style={{ padding: 28 }}>
+          <span className="pill pill-cyan">TripSync</span>
+          <h1 className="mt-4 text-3xl font-bold">{trip.name}</h1>
+          <p className="mt-3 text-[#B7C4DA]">
+            อุปกรณ์นี้ยังไม่ได้อยู่ในทริป — ขอ<strong className="text-star"> ลิงก์เข้าร่วม </strong>
+            จากกลุ่มแล้วเปิดได้เลย เท่านั้นเอง
+          </p>
+        </div>
       </Shell>
     );
   }
 
   const windowText = `${formatShort(toDateKey(trip.windowStart))} – ${formatShort(toDateKey(trip.windowEnd))}`;
+  const statusText =
+    trip.status === "DECIDED" ? "Decided" : trip.status === "ARCHIVED" ? "Archived" : "Lobby · Planning";
 
   return (
-    <Shell wide>
+    <Shell>
       {ownerTrip && ownerParam ? (
         <ClaimOwner tripId={tripId} ownerToken={ownerParam} keepUrl={created === "1"} />
       ) : null}
+      {ownerTrip || member ? (
+        <RememberTrip tripId={tripId} name={trip.name} role={ownerTrip ? "owner" : "member"} />
+      ) : null}
 
-      <header className="mb-8">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-teal">
-          {trip.status === "DECIDED" ? "Decided" : trip.status === "ARCHIVED" ? "Archived" : "Planning"}
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-          {trip.name}
-        </h1>
-        <p className="mt-2 text-ink/80">
-          <span className="font-mono tabular-nums">{trip.durationDays}</span> days between{" "}
-          <span className="font-mono">{windowText}</span>
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <span className="pill pill-cyan">{statusText}</span>
+          <h1
+            className="mt-3.5 font-bold text-[#F4F8FF]"
+            style={{ fontSize: "clamp(30px,5vw,44px)", lineHeight: 1.05, textShadow: "0 1px 8px rgba(0,0,0,.4)" }}
+          >
+            {trip.name}
+          </h1>
+          <p className="m-0 text-[#93A2BC]">
+            {trip.durationDays} วัน ระหว่าง {windowText}
+          </p>
+        </div>
+        <JoinCodeBadge joinCode={trip.joinCode} joinPath={`/join/${trip.joinCode}`} />
       </header>
 
       {ownerTrip && created === "1" && ownerParam ? (
@@ -85,7 +100,7 @@ export default async function TripPage({
       ) : null}
 
       {ownerTrip ? (
-        <OwnerDashboard trip={trip} isAlsoMember={Boolean(member)} />
+        <OwnerDashboard trip={trip} viewerMemberId={member?.id} />
       ) : (
         <MemberHub trip={trip} memberId={member!.id} />
       )}
@@ -93,9 +108,12 @@ export default async function TripPage({
   );
 }
 
-function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className={`mx-auto w-full ${wide ? "max-w-2xl" : "max-w-lg"} flex-1 px-5 py-8 sm:py-12`}>
+    <main className="mx-auto w-full max-w-[760px] flex-1 px-6 pb-20 pt-10">
+      <Link href="/" className="mb-5 inline-block text-sm text-cyan hover:underline">
+        ← หน้าแรก
+      </Link>
       {children}
     </main>
   );
@@ -104,36 +122,37 @@ function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }
 function OwnerLinkOnce({ tripId, ownerToken }: { tripId: string; ownerToken: string }) {
   const path = `/trip/${tripId}?owner=${ownerToken}`;
   return (
-    <section className="mb-8 rounded-lg border-2 border-signal bg-signal/10 p-5">
-      <h2 className="font-display text-lg font-semibold tracking-tight">
-        Save your owner link — it&apos;s shown only this once
-      </h2>
-      <p className="mt-2 text-sm leading-relaxed text-ink/80">
-        This link is the only way back into the owner view (budgets, member
-        status). Bookmark it or paste it somewhere private.{" "}
-        <strong>Don&apos;t put it in the group chat</strong> — share the join
-        link below instead.
+    <section
+      className="mb-6"
+      style={{ background: "rgba(237,84,186,.08)", border: "3px solid #ED54BA", borderRadius: 20, padding: 22 }}
+    >
+      <h2 className="text-lg font-semibold text-star">ลิงก์เจ้าของ — โชว์ครั้งเดียวเท่านั้น</h2>
+      <p className="mt-2 text-sm leading-relaxed text-[#B7C4DA]">
+        นี่คือทางเดียวที่จะกลับเข้าหน้าเจ้าของ (เห็นงบ + สถานะสมาชิก) บุ๊กมาร์กหรือเก็บไว้ที่ลับ{" "}
+        <strong>อย่าแปะในกลุ่มแชท</strong> — ใช้ลิงก์เข้าร่วมด้านล่างแทน
       </p>
-      <p className="mt-3 break-all rounded-md bg-card px-3 py-2 font-mono text-xs">{path}</p>
+      <p
+        className="mt-3 break-all rounded-lg px-3 py-2 font-mono text-xs text-[#DCE6F5]"
+        style={{ background: "#0B1220", border: "2px solid #1C2740" }}
+      >
+        {path}
+      </p>
       <div className="mt-3">
-        <OwnerLinkCopy path={path} />
+        <CopyButton value={path} label="คัดลอกลิงก์เจ้าของ" variant="dark" />
       </div>
     </section>
   );
 }
 
-function OwnerLinkCopy({ path }: { path: string }) {
-  return <CopyButton value={path} label="Copy owner link" className="bg-ink hover:bg-ink/90" />;
-}
-
-/* —————————————————— Owner dashboard —————————————————— */
+/* —————————————————— Shared task-board stops —————————————————— */
 
 interface MemberRow {
   id: string;
   displayName: string;
+  color: string | null;
   _count: { availability: number; votes: number };
-  /** amount is present only when the viewer is the verified owner. */
-  budget: { id: string; amount?: number } | null;
+  /** amount/amountMax are present only when the viewer is the verified owner. */
+  budget: { id: string; amount?: number; amountMax?: number | null } | null;
 }
 
 interface TripWithMembers {
@@ -144,184 +163,202 @@ interface TripWithMembers {
   members: MemberRow[];
 }
 
-function OwnerDashboard({
-  trip,
-  isAlsoMember,
-}: {
-  trip: TripWithMembers;
-  isAlsoMember: boolean;
-}) {
-  const joinPath = `/join/${trip.joinCode}`;
-  const amounts = trip.members
-    .map((m) => m.budget?.amount)
-    .filter((a): a is number => typeof a === "number");
-  const med = median(amounts);
+/**
+ * The task stops, shared by owner and member views. When the viewer is also
+ * a member, each stop reflects THEIR progress (done/current/todo). When the
+ * viewer is an owner who never joined, there's no "my next step" — stops
+ * fall back to whether the whole crew has finished that step.
+ */
+function buildTaskStops(trip: TripWithMembers, viewerMemberId?: string): RouteStop[] {
+  const base = `/trip/${trip.id}`;
+  const total = trip.members.length;
+  const availDone = trip.members.filter((m) => m._count.availability > 0).length;
+  const budgetDone = trip.members.filter((m) => m.budget).length;
+  const votesDone = trip.members.filter((m) => m._count.votes >= 2).length;
+
+  if (viewerMemberId) {
+    const me = trip.members.find((m) => m.id === viewerMemberId);
+    const myAvail = (me?._count.availability ?? 0) > 0;
+    const myBudget = Boolean(me?.budget);
+    const myVotes = (me?._count.votes ?? 0) >= 2;
+    const firstTodo = !myAvail ? "availability" : !myBudget ? "budget" : !myVotes ? "votes" : "results";
+
+    return [
+      {
+        key: "availability",
+        label: "มาร์กวันที่ว่าง",
+        meta: `${availDone} จาก ${total} มาร์กแล้ว`,
+        href: `${base}/availability`,
+        state: myAvail ? "done" : firstTodo === "availability" ? "current" : "todo",
+      },
+      {
+        key: "budget",
+        label: "ตั้งงบของฉัน",
+        meta: `${budgetDone} จาก ${total} กรอกแล้ว · ลับ`,
+        href: `${base}/budget`,
+        state: myBudget ? "done" : firstTodo === "budget" ? "current" : "todo",
+      },
+      {
+        key: "votes",
+        label: "โหวตภูมิภาค & สไตล์",
+        meta: `${votesDone} จาก ${total} โหวตแล้ว`,
+        href: `${base}/votes`,
+        state: myVotes ? "done" : firstTodo === "votes" ? "current" : "todo",
+      },
+      {
+        key: "results",
+        label: "ดูวันที่ดีที่สุด",
+        meta: availDone > 0 ? "พร้อมแล้วเมื่อคุณพร้อม" : "ต้องมีอย่างน้อยหนึ่งคนมาร์กวัน",
+        href: `${base}/results`,
+        state: firstTodo === "results" ? "current" : "todo",
+      },
+    ];
+  }
+
+  // Owner-only, not a participant: show the crew's aggregate progress.
+  return [
+    {
+      key: "availability",
+      label: "มาร์กวันที่ว่าง",
+      meta: `${availDone} จาก ${total} มาร์กแล้ว`,
+      href: `${base}/availability`,
+      state: total > 0 && availDone === total ? "done" : "todo",
+    },
+    {
+      key: "budget",
+      label: "งบของทีม",
+      meta: `${budgetDone} จาก ${total} กรอกแล้ว · ลับ`,
+      href: `${base}/budget`,
+      state: total > 0 && budgetDone === total ? "done" : "todo",
+    },
+    {
+      key: "votes",
+      label: "โหวตภูมิภาค & สไตล์",
+      meta: `${votesDone} จาก ${total} โหวตแล้ว`,
+      href: `${base}/votes`,
+      state: total > 0 && votesDone === total ? "done" : "todo",
+    },
+    {
+      key: "results",
+      label: "ดูวันที่ดีที่สุด",
+      meta: availDone > 0 ? "พร้อมดูผลได้เลย" : "ต้องมีอย่างน้อยหนึ่งคนมาร์กวัน",
+      href: `${base}/results`,
+      state: availDone > 0 ? "current" : "todo",
+    },
+  ];
+}
+
+/* —————————————————— Owner dashboard —————————————————— */
+
+function OwnerDashboard({ trip, viewerMemberId }: { trip: TripWithMembers; viewerMemberId?: string }) {
+  const roster = crewRoster(trip.members);
+  const ranges = trip.members
+    .filter((m): m is MemberRow & { budget: { amount: number; amountMax?: number | null } } =>
+      typeof m.budget?.amount === "number",
+    )
+    .map((m) => ({ min: m.budget.amount, max: m.budget.amountMax ?? m.budget.amount }));
+  const medMin = median(ranges.map((r) => r.min));
+  const medMax = median(ranges.map((r) => r.max));
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="font-display text-lg font-semibold tracking-tight">
-          Invite the group
-        </h2>
-        <p className="mt-1 text-sm text-slate">
-          Safe to paste in the group chat. Join code:{" "}
-          <span className="font-mono text-base font-medium tracking-widest text-ink">
-            {trip.joinCode}
-          </span>
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <CopyButton value={joinPath} label="Share join link" />
-          <Link href={joinPath} className="text-sm text-teal underline underline-offset-4">
-            Open join page
-          </Link>
-        </div>
-        {!isAlsoMember ? (
-          <p className="mt-3 text-sm text-slate">
-            Going yourself? Open the join link too, so you can mark your own days.
-          </p>
-        ) : null}
-      </section>
+      <TaskList stops={buildTaskStops(trip, viewerMemberId)}>
+        <RosterRow tripId={trip.id} members={roster} />
+      </TaskList>
 
-      <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="font-display text-lg font-semibold tracking-tight">
-          Who&apos;s done what
-        </h2>
+      <section className="panel" style={{ padding: 22 }}>
+        <h2 className="text-[19px] font-semibold text-[#EEF3FB]">ใครทำอะไรไปแล้ว</h2>
         {trip.members.length === 0 ? (
-          <p className="mt-2 text-sm text-slate">
-            Nobody has joined yet. Share the join link and this fills in by itself.
-          </p>
+          <p className="mt-2 text-sm text-fog">ยังไม่มีใครเข้าร่วม — แชร์ลิงก์เข้าร่วมแล้วตารางนี้จะเติมเอง</p>
         ) : (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-104 text-sm">
+            <table className="w-full min-w-[26rem] text-sm">
               <thead>
-                <tr className="border-b border-border text-left font-mono text-[11px] uppercase tracking-wider text-slate">
-                  <th className="py-2 pr-3 font-medium">Member</th>
-                  <th className="py-2 pr-3 font-medium">Days</th>
-                  <th className="py-2 pr-3 font-medium">Budget</th>
-                  <th className="py-2 font-medium">Votes</th>
+                <tr className="text-left text-[11px] uppercase tracking-wider text-fog" style={{ borderBottom: "2px solid #1C2740" }}>
+                  <th className="py-2 pr-3 font-medium">สมาชิก</th>
+                  <th className="py-2 pr-3 font-medium">วันว่าง</th>
+                  <th className="py-2 pr-3 font-medium">งบ</th>
+                  <th className="py-2 font-medium">โหวต</th>
                 </tr>
               </thead>
               <tbody>
-                {trip.members.map((m) => (
-                  <tr key={m.id} className="border-b border-border/60 last:border-0">
-                    <td className="py-2.5 pr-3 font-medium">{m.displayName}</td>
-                    <td className="py-2.5 pr-3">
-                      <Check done={m._count.availability > 0} label={`${m._count.availability} marked`} />
-                    </td>
-                    <td className="py-2.5 pr-3">
-                      {m.budget?.amount !== undefined ? (
-                        <span className="font-mono tabular-nums">
-                          ฿{m.budget.amount.toLocaleString("en-US")}
+                {trip.members.map((m) => {
+                  const c = resolveCrewColor(m);
+                  return (
+                    <tr key={m.id} style={{ borderBottom: "1px solid rgba(28,39,64,.6)" }}>
+                      <td className="py-2.5 pr-3">
+                        <span className="flex items-center gap-2 font-medium text-star">
+                          <span className="inline-block h-5 w-[18px]">
+                            <Crewmate body={c.body} shade={c.shade} />
+                          </span>
+                          {m.displayName}
                         </span>
-                      ) : (
-                        <Check done={false} label="" />
-                      )}
-                    </td>
-                    <td className="py-2.5">
-                      <Check done={m._count.votes >= 2} label={m._count.votes === 1 ? "1 of 2" : ""} />
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-2.5 pr-3">
+                        <Check done={m._count.availability > 0} label={`${m._count.availability} วัน`} />
+                      </td>
+                      <td className="py-2.5 pr-3">
+                        {m.budget?.amount !== undefined ? (
+                          <span className="tabular-nums text-sun">
+                            ฿{m.budget.amount.toLocaleString("en-US")}
+                            {m.budget.amountMax && m.budget.amountMax !== m.budget.amount
+                              ? `–${m.budget.amountMax.toLocaleString("en-US")}`
+                              : ""}
+                          </span>
+                        ) : (
+                          <Check done={false} label="" />
+                        )}
+                      </td>
+                      <td className="py-2.5">
+                        <Check done={m._count.votes >= 2} label={m._count.votes === 1 ? "1 of 2" : ""} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-        {amounts.length > 0 ? (
-          <p className="mt-3 border-t border-dashed border-border pt-3 text-sm text-slate">
-            Median budget:{" "}
-            <span className="font-mono font-medium tabular-nums text-ink">
-              ฿{med?.toLocaleString("en-US")}
+        {ranges.length > 0 ? (
+          <p className="mt-3 pt-3 text-sm text-fog" style={{ borderTop: "2px dashed #1C2740" }}>
+            ช่วงงบค่ากลาง (median):{" "}
+            <span className="font-medium tabular-nums text-sun">
+              ฿{medMin?.toLocaleString("en-US")}–{medMax?.toLocaleString("en-US")}
             </span>{" "}
-            ({amounts.length} of {trip.members.length} submitted). Only you can see
-            these figures.
+            ({ranges.length} จาก {trip.members.length} คน) — เห็นได้แค่คุณคนเดียว
           </p>
         ) : null}
+        {!viewerMemberId ? (
+          <p className="mt-3 text-sm text-fog">จะไปเองด้วยไหม? เปิดลิงก์เข้าร่วมด้วย จะได้มาร์กวันของตัวเองได้</p>
+        ) : null}
       </section>
-
-      <Link
-        href={`/trip/${trip.id}/results`}
-        className="flex h-12 items-center justify-center rounded-md bg-signal px-6 font-display text-base font-semibold text-ink hover:brightness-95"
-      >
-        Show the best dates
-      </Link>
     </div>
   );
 }
 
 function Check({ done, label }: { done: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 font-mono text-xs ${done ? "text-teal" : "text-slate"}`}>
+    <span className={`inline-flex items-center gap-1.5 text-xs ${done ? "text-[#7BE089]" : "text-fog"}`}>
       <span aria-hidden>{done ? "✓" : "—"}</span>
-      <span>{done ? label || "done" : label || "not yet"}</span>
+      <span>{done ? label || "เสร็จ" : label || "ยัง"}</span>
     </span>
   );
 }
 
 /* —————————————————— Member hub —————————————————— */
 
-function MemberHub({
-  trip,
-  memberId,
-}: {
-  trip: TripWithMembers;
-  memberId: string;
-}) {
+function MemberHub({ trip, memberId }: { trip: TripWithMembers; memberId: string }) {
+  const roster = crewRoster(trip.members);
   const me = trip.members.find((m) => m.id === memberId);
-  const total = trip.members.length;
-  const availDone = trip.members.filter((m) => m._count.availability > 0).length;
-  const budgetDone = trip.members.filter((m) => m.budget).length;
-  const votesDone = trip.members.filter((m) => m._count.votes >= 2).length;
-
-  const base = `/trip/${trip.id}`;
-  const myAvail = (me?._count.availability ?? 0) > 0;
-  const myBudget = Boolean(me?.budget);
-  const myVotes = (me?._count.votes ?? 0) >= 2;
-
-  const firstTodo = !myAvail ? "availability" : !myBudget ? "budget" : !myVotes ? "votes" : "results";
-
-  const stops: RouteStop[] = [
-    {
-      key: "join",
-      label: "Join the trip",
-      meta: `${total} aboard`,
-      state: "done",
-    },
-    {
-      key: "availability",
-      label: "Mark the days you're free",
-      meta: `${availDone} of ${total} have marked days`,
-      href: `${base}/availability`,
-      state: myAvail ? "done" : firstTodo === "availability" ? "current" : "todo",
-    },
-    {
-      key: "budget",
-      label: "Save my budget",
-      meta: `${budgetDone} of ${total} submitted — amounts stay private`,
-      href: `${base}/budget`,
-      state: myBudget ? "done" : firstTodo === "budget" ? "current" : "todo",
-    },
-    {
-      key: "votes",
-      label: "Vote region & vibe",
-      meta: `${votesDone} of ${total} have voted`,
-      href: `${base}/votes`,
-      state: myVotes ? "done" : firstTodo === "votes" ? "current" : "todo",
-    },
-    {
-      key: "results",
-      label: "Show the best dates",
-      meta: availDone > 0 ? "Ready when you are" : "Needs at least one calendar",
-      href: `${base}/results`,
-      state: firstTodo === "results" ? "current" : "todo",
-    },
-  ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <RouteLine stops={stops} />
-      <p className="text-sm text-slate">
-        You&apos;re aboard as <strong className="text-ink">{me?.displayName}</strong>.
-        Tap any stop to update your part.
+    <div className="flex flex-col gap-[22px]">
+      <TaskList stops={buildTaskStops(trip, memberId)}>
+        <RosterRow tripId={trip.id} members={roster} />
+      </TaskList>
+
+      <p className="px-0.5 text-sm text-fog">
+        คุณอยู่ในทีมชื่อ <strong className="text-star">{me?.displayName}</strong> — แตะภารกิจเพื่ออัปเดตส่วนของคุณ
       </p>
     </div>
   );

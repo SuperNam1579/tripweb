@@ -2,12 +2,20 @@
  * Budget privacy rules. Pure — no DB access, no I/O.
  * See CLAUDE.md: "The budget privacy rules".
  *
+ * Each member submits a RANGE (min–max) they're comfortable spending, not a
+ * single figure. Affordability is judged against the top of that range (the
+ * max) — that's the ceiling a member is actually willing to pay.
+ *
  * HARD RULE: nothing exported here for group-facing use may ever contain an
  * individual amount or a name tied to an amount. Only the owner view does.
  */
 
-/** Fewer than this many submitted budgets → suppress all group-facing signal. */
 export const MIN_BUDGETS_FOR_SIGNAL = 3;
+
+export interface BudgetRange {
+  min: number;
+  max: number;
+}
 
 export type BudgetTier =
   | "EVERYONE_AFFORDS"
@@ -17,12 +25,12 @@ export type BudgetTier =
 
 export interface BudgetSignal {
   tier: BudgetTier;
-  /** Number of members whose budget is under the price. Only meaningful for OVER_SOME_BUDGETS. */
+  /** Number of members whose max is under the price. Only meaningful for OVER_SOME_BUDGETS. */
   overCount: number;
   submittedCount: number;
 }
 
-/** Median of submitted budgets — the default recommendation threshold. */
+/** Median of a list of numbers. */
 export function median(amounts: number[]): number | null {
   if (amounts.length === 0) return null;
   const sorted = [...amounts].sort((a, b) => a - b);
@@ -32,15 +40,16 @@ export function median(amounts: number[]): number | null {
 
 /**
  * Group-facing tier for a price P. Never exposes who is over — only how many.
- * Suppressed entirely below MIN_BUDGETS_FOR_SIGNAL submissions, because with
- * 1–2 entries the tiers leak individual amounts by inference.
+ * A member "affords" P when P is at or under their range's max. Suppressed
+ * entirely below MIN_BUDGETS_FOR_SIGNAL submissions, because with 1–2
+ * entries the tiers leak individual ranges by inference.
  */
-export function budgetSignal(price: number, amounts: number[]): BudgetSignal {
-  const submittedCount = amounts.length;
+export function budgetSignal(price: number, ranges: BudgetRange[]): BudgetSignal {
+  const submittedCount = ranges.length;
   if (submittedCount < MIN_BUDGETS_FOR_SIGNAL) {
     return { tier: "INSUFFICIENT_DATA", overCount: 0, submittedCount };
   }
-  const overCount = amounts.filter((a) => a < price).length;
+  const overCount = ranges.filter((r) => r.max < price).length;
   if (overCount === 0) {
     return { tier: "EVERYONE_AFFORDS", overCount: 0, submittedCount };
   }
@@ -52,12 +61,12 @@ export function budgetSignal(price: number, amounts: number[]): BudgetSignal {
 }
 
 /**
- * The recommendation threshold. Returns null when suppressed — callers must
- * render nothing in that case.
+ * The recommendation threshold: the median of everyone's range max. Returns
+ * null when suppressed — callers must render nothing in that case.
  */
-export function recommendationThreshold(amounts: number[]): number | null {
-  if (amounts.length < MIN_BUDGETS_FOR_SIGNAL) return null;
-  return median(amounts);
+export function recommendationThreshold(ranges: BudgetRange[]): number | null {
+  if (ranges.length < MIN_BUDGETS_FOR_SIGNAL) return null;
+  return median(ranges.map((r) => r.max));
 }
 
 /**

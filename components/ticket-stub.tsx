@@ -1,72 +1,72 @@
 import type { RankedWindow } from "@/lib/availability";
+import type { CrewColor } from "@/lib/crew";
+import { Crewmate } from "@/components/crewmate";
 import { formatRange, formatShort } from "@/lib/dates";
-import { cn } from "@/lib/utils";
 
 /**
- * A ranked date window as a perforated ticket stub. The best window gets
- * --signal; the rest stay quiet. See DESIGN.md — this is the payoff screen.
+ * The payoff: the group's best date window as a glowing "victory" card with the
+ * free crew lined up, and the runner-up windows as quiet panels. See DESIGN.md.
  */
-export function TicketStub({
+export function BestWindowCard({
   window: w,
-  isBest,
-  index,
+  crew,
 }: {
   window: RankedWindow;
-  isBest: boolean;
-  index: number;
+  crew: CrewColor[];
 }) {
   const full = w.freeCount === w.totalMembers;
   return (
-    <article
-      className="ticket-stub stub-reveal"
-      style={
-        {
-          "--stub-index": index,
-          "--stub-bg": isBest ? "var(--color-signal)" : "var(--color-card)",
-        } as React.CSSProperties
-      }
+    <div
+      className="glow relative overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg,#4AC959,#2C8C39)",
+        border: "3px solid #05070D",
+        borderRadius: 26,
+        padding: "30px 28px",
+      }}
     >
-      <div
-        className={cn(
-          "rounded-t-lg border border-b-0 px-5 pt-5 pb-4",
-          isBest ? "border-signal bg-signal text-ink" : "border-border bg-card",
-        )}
-      >
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="font-mono text-[11px] uppercase tracking-widest opacity-70">
-            {isBest ? "Best dates" : `Option ${index + 1}`}
-          </p>
-          <p className="hidden font-mono text-[11px] tabular-nums opacity-70 sm:block">
+      <div className="pop">
+        <div className="flex items-baseline justify-between font-semibold text-[#083012]">
+          <span className="text-xs uppercase tracking-[.16em]">ช่วงที่ดีที่สุด</span>
+          <span className="text-[13px] tabular-nums opacity-85">
             {formatShort(w.startDate)} → {formatShort(w.endDate)}
-          </p>
+          </span>
         </div>
-        <p className="mt-1 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+        <p
+          className="my-2 font-bold text-white"
+          style={{ fontSize: "clamp(44px,9vw,74px)", lineHeight: 1, textShadow: "0 2px 12px rgba(0,0,0,.35)" }}
+        >
           {formatRange(w.startDate, w.endDate)}
         </p>
-      </div>
-      <div
-        className={cn(
-          "border border-y-0 px-5 pb-4",
-          isBest ? "border-signal bg-signal text-ink" : "border-border bg-card",
-        )}
-      >
-        <div
-          className={cn(
-            "border-t border-dashed pt-3",
-            isBest ? "border-ink/25" : "border-border",
-          )}
-        >
-          <p className="font-mono text-sm font-medium tabular-nums">
-            {w.freeCount} of {w.totalMembers} free{full ? " — everyone" : ""}
-          </p>
-          {!full && w.missingMemberNames.length > 0 ? (
-            <p className={cn("mt-1 text-sm", isBest ? "text-ink/70" : "text-slate")}>
-              Missing: {w.missingMemberNames.join(", ")}
-            </p>
-          ) : null}
+        <p className="mb-3.5 text-[17px] font-semibold text-[#0A3315]">
+          {w.freeCount} of {w.totalMembers} free{full ? " — ครบทีม!" : ""}
+        </p>
+        {!full && w.missingMemberNames.length > 0 ? (
+          <p className="mb-3.5 text-sm font-medium text-[#0A3315]/80">ยังไม่ว่าง: {w.missingMemberNames.join(", ")}</p>
+        ) : null}
+        <div className="flex flex-wrap gap-1.5">
+          {crew.map((c, i) => (
+            <div key={i} className="h-[54px] w-[46px]" style={{ filter: "drop-shadow(0 6px 5px rgba(0,0,0,.35))" }}>
+              <Crewmate body={c.body} shade={c.shade} />
+            </div>
+          ))}
         </div>
       </div>
-      <div className="ticket-perforation" aria-hidden />
-    </article>
+    </div>
+  );
+}
+
+export function RunnerUpCard({ window: w, index }: { window: RankedWindow; index: number }) {
+  return (
+    <div className="panel-flat" style={{ borderRadius: 18, padding: 20 }}>
+      <p className="m-0 text-[11px] uppercase tracking-[.14em] text-[#5E6E88]">ตัวเลือก {index + 2}</p>
+      <p className="mb-2.5 mt-2 text-[32px] font-bold leading-none text-star">{formatRange(w.startDate, w.endDate)}</p>
+      <p className="m-0 text-sm text-[#93A2BC] tabular-nums">
+        {w.freeCount} of {w.totalMembers} free
+      </p>
+      {w.missingMemberNames.length > 0 ? (
+        <p className="mt-1 text-[13px] text-[#6B7B94]">ยังไม่ว่าง: {w.missingMemberNames.join(", ")}</p>
+      ) : null}
+    </div>
   );
 }

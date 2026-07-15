@@ -7,10 +7,12 @@ export function CopyButton({
   value,
   label,
   className,
+  variant = "cyan",
 }: {
   value: string;
   label: string;
   className?: string;
+  variant?: "cyan" | "dark";
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -31,12 +33,9 @@ export function CopyButton({
     <button
       type="button"
       onClick={copy}
-      className={cn(
-        "inline-flex h-9 items-center justify-center rounded-md bg-pine px-4 text-sm font-medium text-paper hover:bg-pine/90",
-        className,
-      )}
+      className={cn("btn px-[22px] py-3 text-[15px]", variant === "cyan" ? "btn-cyan" : "btn-dark", className)}
     >
-      {copied ? "Copied ✓" : label}
+      {copied ? "คัดลอกแล้ว ✓" : label}
     </button>
   );
 }
