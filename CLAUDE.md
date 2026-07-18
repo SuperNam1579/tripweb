@@ -70,18 +70,24 @@ Rules:
   returns tiers/counts only. Enforce this at the API layer, not just in the UI.
 - Put this in `lib/budget.ts` as pure functions and unit-test it.
 
-## Places module (mocked, swappable)
-- `lib/places/` exposes ONE interface, e.g. `searchPlaces(region, activity, opts)`.
+## Destination & Places module (swappable provider)
+- The OWNER sets a free-text `Trip.destination` (city / province / island) at creation.
+  The system does NOT guess the destination — the group has usually decided that already.
+- `lib/places/` exposes ONE interface: `searchPlaces(destination, activity, opts)`.
 - Return shape matches Google Places exactly: { placeId, name, photoUrl, rating,
   priceLevel, address, types[] }.
-- Current implementation: `mockProvider.ts` with realistic Thai place data.
-- Real implementation goes in `googleProvider.ts` later — swapping providers must require
-  ZERO changes in any UI component. No Places types leaking into components.
+- `googleProvider.ts` (Places API New, Text Search) is the only provider. There is NO mock
+  fallback on purpose: a mock can't honour a free-text destination, so it would answer a
+  Krabi trip with Chiang Mai places. Callers must catch a throw (missing key, quota,
+  network) and say so — the results page does, so a Places outage never takes down the
+  date rankings. No Places types leaking into components.
+- Budget-fit filtering of recommendations is PAUSED until real hotel costs exist (a future
+  phase). `lib/budget.ts` still collects budgets and stays fully tested for reuse then.
 
 ## Voting
-- REGION options: Northern Thailand, Isaan, Andaman Coast, Gulf Islands, Central
-- ACTIVITY options: Mountains, Beach, City, Food, Nature, Culture
-- One vote per member per category (upsert on re-vote).
+- The group votes on ONE thing: ACTIVITY (Mountains, Beach, City, Food, Nature, Culture).
+  Region voting was removed entirely — destination comes from the owner instead.
+- One vote per member (upsert on re-vote). Results search = destination × winning activity.
 
 ## Design direction
 See DESIGN.md. Do not ship the default AI-app look.

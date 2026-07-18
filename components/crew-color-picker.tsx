@@ -12,12 +12,17 @@ import { CREW_PALETTE } from "@/lib/crew";
 export function CrewColorPicker({
   name = "color",
   takenColors = [],
+  defaultColor,
 }: {
   name?: string;
   takenColors?: string[];
+  /** Preselect this colour (e.g. the member's current one) instead of the first free slot. */
+  defaultColor?: string;
 }) {
   const taken = new Set(takenColors);
-  const firstAvailable = CREW_PALETTE.find((c) => !taken.has(c.key))?.key ?? CREW_PALETTE[0].key;
+  const preferred =
+    defaultColor && !taken.has(defaultColor) ? defaultColor : undefined;
+  const firstAvailable = preferred ?? CREW_PALETTE.find((c) => !taken.has(c.key))?.key ?? CREW_PALETTE[0].key;
   const [selected, setSelected] = useState(firstAvailable);
   const current = CREW_PALETTE.find((c) => c.key === selected) ?? CREW_PALETTE[0];
 

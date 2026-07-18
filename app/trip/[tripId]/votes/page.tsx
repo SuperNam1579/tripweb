@@ -2,7 +2,7 @@ import Link from "next/link";
 import { VoteBallot, type BallotCategory } from "@/components/vote-ballot";
 import { getMember } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { ACTIVITY_OPTIONS, REGION_OPTIONS, tallyVotes } from "@/lib/votes";
+import { ACTIVITY_OPTIONS, tallyVotes } from "@/lib/votes";
 
 export default async function VotesPage({
   params,
@@ -25,22 +25,19 @@ export default async function VotesPage({
     );
   }
 
-  const votes = await prisma.vote.findMany({ where: { tripId } });
+  const [trip, votes] = await Promise.all([
+    prisma.trip.findUnique({ where: { id: tripId }, select: { destination: true } }),
+    prisma.vote.findMany({ where: { tripId, category: "ACTIVITY" } }),
+  ]);
 
-  function build(
-    category: "REGION" | "ACTIVITY",
-    title: string,
-    options: readonly string[],
-  ): BallotCategory {
-    const values = votes.filter((v) => v.category === category).map((v) => v.value);
-    return {
-      category,
-      title,
-      options,
-      myVote: votes.find((v) => v.category === category && v.memberId === member!.id)?.value ?? null,
-      counts: Object.fromEntries(tallyVotes(values, options).map((t) => [t.value, t.count])),
-    };
-  }
+  const values = votes.map((v) => v.value);
+  const activityBallot: BallotCategory = {
+    category: "ACTIVITY",
+    title: "แนวที่อยากไป",
+    options: ACTIVITY_OPTIONS,
+    myVote: votes.find((v) => v.memberId === member.id)?.value ?? null,
+    counts: Object.fromEntries(tallyVotes(values, ACTIVITY_OPTIONS).map((t) => [t.value, t.count])),
+  };
 
   return (
     <Shell tripId={tripId}>
@@ -50,19 +47,21 @@ export default async function VotesPage({
           className="mt-4 font-bold text-[#F4F8FF]"
           style={{ fontSize: "clamp(28px,5vw,42px)", lineHeight: 1.05, textShadow: "0 1px 8px rgba(0,0,0,.4)" }}
         >
-          โหวตภูมิภาค &amp; สไตล์
+          โหวตแนวที่อยากไป
         </h1>
-        <p className="m-0 text-[#93A2BC]">เลือกอย่างละหนึ่ง — ดูได้เลยว่าทีมเอนไปทางไหน</p>
+        <p className="m-0 text-[#93A2BC]">
+          {trip?.destination ? (
+            <>
+              ทริปไป <span className="text-cyan">{trip.destination}</span> — เลือกว่าอยากเที่ยวแนวไหน
+              เดี๋ยวระบบหาที่จริงให้
+            </>
+          ) : (
+            "เลือกว่าอยากเที่ยวแนวไหน เดี๋ยวระบบหาที่จริงให้"
+          )}
+        </p>
       </header>
 
-      <VoteBallot
-        tripId={tripId}
-        resultsHref={`/trip/${tripId}/results`}
-        categories={[
-          build("REGION", "ภูมิภาค", REGION_OPTIONS),
-          build("ACTIVITY", "สไตล์ทริป", ACTIVITY_OPTIONS),
-        ]}
-      />
+      <VoteBallot tripId={tripId} resultsHref={`/trip/${tripId}/results`} categories={[activityBallot]} />
     </Shell>
   );
 }

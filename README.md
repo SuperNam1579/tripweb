@@ -10,8 +10,9 @@ No accounts: the owner gets a secret link, everyone else joins with a short code
 ## Stack
 
 Next.js (App Router, TypeScript) · Prisma · PostgreSQL · Tailwind CSS · Vercel.
-Google Places is mocked behind `lib/places/` — swapping in the real
-`googleProvider` later requires zero UI changes.
+Place recommendations come from the real Google Places API (New) behind
+`lib/places/` — the owner sets the trip's destination, the group votes on the
+vibe, and those two drive the search.
 
 ## Local development
 
@@ -38,7 +39,7 @@ npm test
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Postgres connection string. Local: the `prisma+postgres://` URL from `npx prisma dev`. Production: a Neon/Supabase `postgres://` URL (pooled). |
-| `GOOGLE_PLACES_API_KEY` | Reserved for the real Places provider. Unused while the mock provider is active. |
+| `GOOGLE_PLACES_API_KEY` | Google Places API (New) key. **Required** for place recommendations — without it the results page still ranks dates but shows no places. Needs Places API (New) enabled, and must not be restricted to HTTP referrers (it's called server-side). Place **photos** are a separate paid SKU: with no billing on the project Google omits them and the app falls back to placeholder art — names/ratings still work. |
 
 ## Deploying to Vercel
 

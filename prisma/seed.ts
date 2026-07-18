@@ -23,6 +23,7 @@ async function main() {
   const trip = await prisma.trip.create({
     data: {
       name: "ทริปเพื่อนซี้ — Chiang Mai?",
+      destination: "เชียงใหม่",
       durationDays,
       windowStart: fromDateKey(windowStart),
       windowEnd: fromDateKey(windowEnd),
@@ -35,42 +36,36 @@ async function main() {
     name: string;
     freeOffsets: number[]; // offsets into the window marked free
     budget?: { min: number; max: number };
-    region?: string;
     activity?: string;
   }[] = [
     {
       name: "แบม",
       freeOffsets: [...range(4, 10), ...range(18, 24)],
       budget: { min: 6000, max: 8000 },
-      region: "Northern Thailand",
       activity: "Mountains",
     },
     {
       name: "Golf",
       freeOffsets: [...range(5, 9), ...range(17, 27)],
       budget: { min: 3000, max: 5000 },
-      region: "Northern Thailand",
       activity: "Food",
     },
     {
       name: "มิ้นท์",
       freeOffsets: [...range(0, 12)],
       budget: { min: 7000, max: 10000 },
-      region: "Andaman Coast",
       activity: "Mountains",
     },
     {
       name: "Nine",
       freeOffsets: [...range(5, 10), ...range(19, 23)],
       budget: { min: 4000, max: 6000 },
-      region: "Northern Thailand",
       activity: "Nature",
     },
     {
       name: "ฝ้าย",
       freeOffsets: [...range(6, 8), ...range(20, 26)],
       // no budget yet — shows the "4 of 5 submitted" state
-      region: "Gulf Islands",
       activity: "Mountains",
     },
   ];
@@ -102,16 +97,6 @@ async function main() {
           memberId: member.id,
           amount: person.budget.min,
           amountMax: person.budget.max,
-        },
-      });
-    }
-    if (person.region) {
-      await prisma.vote.create({
-        data: {
-          tripId: trip.id,
-          memberId: member.id,
-          category: "REGION",
-          value: person.region,
         },
       });
     }

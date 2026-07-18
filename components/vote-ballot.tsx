@@ -5,7 +5,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { saveVote } from "@/app/actions";
 
 export interface BallotCategory {
-  category: "REGION" | "ACTIVITY";
+  category: "ACTIVITY";
   title: string;
   options: readonly string[];
   /** My current vote, if any. */

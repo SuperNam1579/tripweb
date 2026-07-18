@@ -3,9 +3,12 @@ import { ClaimOwner } from "@/components/claim-owner";
 import { CopyButton } from "@/components/copy-button";
 import { Crewmate } from "@/components/crewmate";
 import { JoinCodeBadge } from "@/components/join-code-badge";
+import { MyProfileCard } from "@/components/my-profile-card";
 import { RememberTrip } from "@/components/remember-trip";
+import { RemoveMemberButton } from "@/components/remove-member-button";
 import { RosterRow } from "@/components/roster-row";
 import { TaskList, type RouteStop } from "@/components/route-line";
+import { TaskReminderBanner } from "@/components/task-reminder-banner";
 import { getMember, getOwnerTrip } from "@/lib/auth";
 import { median } from "@/lib/budget";
 import { crewRoster, resolveCrewColor } from "@/lib/crew";
@@ -88,12 +91,32 @@ export default async function TripPage({
           >
             {trip.name}
           </h1>
+          {trip.destination ? (
+            <p className="mt-1 mb-0 text-[15px] font-semibold text-cyan">จุดหมาย: {trip.destination}</p>
+          ) : null}
           <p className="m-0 text-[#93A2BC]">
             {trip.durationDays} วัน ระหว่าง {windowText}
+            {ownerTrip ? (
+              <>
+                {" "}
+                ·{" "}
+                <Link href={`/trip/${tripId}/dates`} className="text-cyan hover:underline">
+                  แก้ไขวันที่
+                </Link>
+              </>
+            ) : null}
           </p>
         </div>
         <JoinCodeBadge joinCode={trip.joinCode} joinPath={`/join/${trip.joinCode}`} />
       </header>
+
+      <TaskReminderBanner
+        total={trip.members.length}
+        availDone={trip.members.filter((m) => m._count.availability > 0).length}
+        budgetDone={trip.members.filter((m) => m.budget).length}
+        votesDone={trip.members.filter((m) => m._count.votes >= 1).length}
+        windowStart={toDateKey(trip.windowStart)}
+      />
 
       {ownerTrip && created === "1" && ownerParam ? (
         <OwnerLinkOnce tripId={tripId} ownerToken={ownerParam} />
@@ -174,13 +197,13 @@ function buildTaskStops(trip: TripWithMembers, viewerMemberId?: string): RouteSt
   const total = trip.members.length;
   const availDone = trip.members.filter((m) => m._count.availability > 0).length;
   const budgetDone = trip.members.filter((m) => m.budget).length;
-  const votesDone = trip.members.filter((m) => m._count.votes >= 2).length;
+  const votesDone = trip.members.filter((m) => m._count.votes >= 1).length;
 
   if (viewerMemberId) {
     const me = trip.members.find((m) => m.id === viewerMemberId);
     const myAvail = (me?._count.availability ?? 0) > 0;
     const myBudget = Boolean(me?.budget);
-    const myVotes = (me?._count.votes ?? 0) >= 2;
+    const myVotes = (me?._count.votes ?? 0) >= 1;
     const firstTodo = !myAvail ? "availability" : !myBudget ? "budget" : !myVotes ? "votes" : "results";
 
     return [
@@ -200,7 +223,7 @@ function buildTaskStops(trip: TripWithMembers, viewerMemberId?: string): RouteSt
       },
       {
         key: "votes",
-        label: "โหวตภูมิภาค & สไตล์",
+        label: "โหวตแนวที่อยากไป",
         meta: `${votesDone} จาก ${total} โหวตแล้ว`,
         href: `${base}/votes`,
         state: myVotes ? "done" : firstTodo === "votes" ? "current" : "todo",
@@ -233,7 +256,7 @@ function buildTaskStops(trip: TripWithMembers, viewerMemberId?: string): RouteSt
     },
     {
       key: "votes",
-      label: "โหวตภูมิภาค & สไตล์",
+      label: "โหวตแนวที่อยากไป",
       meta: `${votesDone} จาก ${total} โหวตแล้ว`,
       href: `${base}/votes`,
       state: total > 0 && votesDone === total ? "done" : "todo",
@@ -252,6 +275,7 @@ function buildTaskStops(trip: TripWithMembers, viewerMemberId?: string): RouteSt
 
 function OwnerDashboard({ trip, viewerMemberId }: { trip: TripWithMembers; viewerMemberId?: string }) {
   const roster = crewRoster(trip.members);
+  const me = trip.members.find((m) => m.id === viewerMemberId);
   const ranges = trip.members
     .filter((m): m is MemberRow & { budget: { amount: number; amountMax?: number | null } } =>
       typeof m.budget?.amount === "number",
@@ -262,6 +286,8 @@ function OwnerDashboard({ trip, viewerMemberId }: { trip: TripWithMembers; viewe
 
   return (
     <div className="flex flex-col gap-6">
+      {me ? <MyProfileCard tripId={trip.id} name={me.displayName} crew={resolveCrewColor(me)} /> : null}
+
       <TaskList stops={buildTaskStops(trip, viewerMemberId)}>
         <RosterRow tripId={trip.id} members={roster} />
       </TaskList>
@@ -278,7 +304,8 @@ function OwnerDashboard({ trip, viewerMemberId }: { trip: TripWithMembers; viewe
                   <th className="py-2 pr-3 font-medium">สมาชิก</th>
                   <th className="py-2 pr-3 font-medium">วันว่าง</th>
                   <th className="py-2 pr-3 font-medium">งบ</th>
-                  <th className="py-2 font-medium">โหวต</th>
+                  <th className="py-2 pr-3 font-medium">โหวต</th>
+                  <th className="py-2 font-medium" />
                 </tr>
               </thead>
               <tbody>
@@ -309,8 +336,13 @@ function OwnerDashboard({ trip, viewerMemberId }: { trip: TripWithMembers; viewe
                           <Check done={false} label="" />
                         )}
                       </td>
-                      <td className="py-2.5">
-                        <Check done={m._count.votes >= 2} label={m._count.votes === 1 ? "1 of 2" : ""} />
+                      <td className="py-2.5 pr-3">
+                        <Check done={m._count.votes >= 1} label="" />
+                      </td>
+                      <td className="py-2.5 text-right">
+                        {m.id !== viewerMemberId ? (
+                          <RemoveMemberButton tripId={trip.id} memberId={m.id} memberName={m.displayName} />
+                        ) : null}
                       </td>
                     </tr>
                   );
@@ -353,13 +385,13 @@ function MemberHub({ trip, memberId }: { trip: TripWithMembers; memberId: string
 
   return (
     <div className="flex flex-col gap-[22px]">
+      {me ? <MyProfileCard tripId={trip.id} name={me.displayName} crew={resolveCrewColor(me)} /> : null}
+
       <TaskList stops={buildTaskStops(trip, memberId)}>
         <RosterRow tripId={trip.id} members={roster} />
       </TaskList>
 
-      <p className="px-0.5 text-sm text-fog">
-        คุณอยู่ในทีมชื่อ <strong className="text-star">{me?.displayName}</strong> — แตะภารกิจเพื่ออัปเดตส่วนของคุณ
-      </p>
+      <p className="px-0.5 text-sm text-fog">แตะภารกิจด้านบนเพื่ออัปเดตส่วนของคุณ</p>
     </div>
   );
 }

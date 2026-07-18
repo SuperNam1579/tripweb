@@ -1,11 +1,9 @@
-export const REGION_OPTIONS = [
-  "Northern Thailand",
-  "Isaan",
-  "Andaman Coast",
-  "Gulf Islands",
-  "Central",
-] as const;
-
+/**
+ * The owner sets the destination directly now (see Trip.destination), so the
+ * only thing the group votes on is the trip's vibe / place types. Region
+ * voting was removed — its enum value stays for old rows but nothing here
+ * references it.
+ */
 export const ACTIVITY_OPTIONS = [
   "Mountains",
   "Beach",
@@ -15,7 +13,6 @@ export const ACTIVITY_OPTIONS = [
   "Culture",
 ] as const;
 
-export type RegionOption = (typeof REGION_OPTIONS)[number];
 export type ActivityOption = (typeof ACTIVITY_OPTIONS)[number];
 
 export interface VoteTally {

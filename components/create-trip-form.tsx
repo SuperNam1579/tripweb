@@ -31,6 +31,21 @@ export function CreateTripForm() {
       </div>
 
       <div>
+        <label htmlFor="destination" className="label">
+          จะไปไหน (เมือง / จังหวัด / เกาะ)
+        </label>
+        <input
+          id="destination"
+          name="destination"
+          required
+          maxLength={80}
+          placeholder="เช่น เชียงใหม่ / ปาย / เกาะสมุย"
+          className="field"
+        />
+        <p className="mt-1.5 text-xs text-fog">ทีมจะโหวตแค่ &ldquo;แนวที่อยากไป&rdquo; แล้วระบบหาที่เที่ยวจริงในจุดหมายนี้ให้</p>
+      </div>
+
+      <div>
         <label htmlFor="yourName" className="label">
           ชื่อของคุณ
         </label>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { deleteTrip, leaveTrip } from "@/app/actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Crewmate } from "@/components/crewmate";
 import { formatShort } from "@/lib/dates";
@@ -25,6 +26,8 @@ export default function MyTripsPage() {
   const [state, setState] = useState<LoadState>(saved.length === 0 ? "empty" : "loading");
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [pendingRemove, setPendingRemove] = useState<TripSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     if (saved.length === 0) return;
@@ -45,10 +48,21 @@ export default function MyTripsPage() {
   }, [saved]);
 
   function confirmRemove() {
-    if (!pendingRemove) return;
-    forgetTrip(pendingRemove.id);
-    setTrips((prev) => prev.filter((t) => t.id !== pendingRemove.id));
-    setPendingRemove(null);
+    const target = pendingRemove;
+    if (!target) return;
+    setError(null);
+    startTransition(async () => {
+      // Owner deletes the whole trip; a member can only remove themselves.
+      const result = target.role === "owner" ? await deleteTrip(target.id) : await leaveTrip(target.id);
+      if (result?.error) {
+        setError(result.error);
+        setPendingRemove(null);
+        return;
+      }
+      forgetTrip(target.id);
+      setTrips((prev) => prev.filter((t) => t.id !== target.id));
+      setPendingRemove(null);
+    });
   }
 
   return (
@@ -98,6 +112,11 @@ export default function MyTripsPage() {
             <span className="panel-dot bg-[#4AC959]" />
             <span className="ml-2 text-xs uppercase tracking-[.16em] text-[#8FA0BE]">My Trips</span>
           </div>
+          {error ? (
+            <p role="alert" className="px-4 py-3 text-sm text-[#FFB4B4]" style={{ background: "rgba(226,58,58,.12)" }}>
+              {error}
+            </p>
+          ) : null}
           {trips.map((t) => (
             <div
               key={t.id}
@@ -120,7 +139,7 @@ export default function MyTripsPage() {
               <button
                 type="button"
                 onClick={() => setPendingRemove(t)}
-                aria-label="ลบออกจากรายการ"
+                aria-label={t.role === "owner" ? `ลบทริป ${t.name} ถาวร` : `ออกจากทริป ${t.name}`}
                 className="flex-none text-lg leading-none text-fog hover:text-[#FFB4B4]"
                 style={{ padding: 4 }}
               >
@@ -133,14 +152,18 @@ export default function MyTripsPage() {
 
       <ConfirmDialog
         open={pendingRemove !== null}
-        title="ลบทริปนี้ออกจากรายการ?"
+        title={pendingRemove?.role === "owner" ? "ลบทริปนี้ถาวร?" : "ออกจากทริปนี้?"}
         description={
           pendingRemove
-            ? `"${pendingRemove.name}" จะหายจากลิสต์นี้ในเครื่องนี้ — ทริปจริงและข้อมูลทั้งหมดยังอยู่ ไม่ได้ถูกลบ ถ้ามีลิงก์เจ้าของเก็บไว้ก็ยังเข้าได้เหมือนเดิม`
+            ? pendingRemove.role === "owner"
+              ? `"${pendingRemove.name}" จะถูกลบถาวร — สมาชิกทั้ง ${pendingRemove.memberCount} คน วันว่าง งบ และโหวตทั้งหมดหายไปด้วย กู้คืนไม่ได้ และคนอื่นจะเข้าทริปนี้ไม่ได้อีก`
+              : `คุณจะออกจาก "${pendingRemove.name}" — วันว่าง งบ และโหวตของคุณจะถูกลบ กู้คืนไม่ได้ ทริปยังอยู่สำหรับคนอื่น (เข้าใหม่ได้ด้วยลิงก์เข้าร่วม)`
             : undefined
         }
-        confirmLabel="ลบออกจากรายการ"
-        cancelLabel="ไม่ลบ"
+        confirmLabel={
+          pending ? "กำลังลบ…" : pendingRemove?.role === "owner" ? "ลบทริปถาวร" : "ออกจากทริป"
+        }
+        cancelLabel="ยกเลิก"
         onConfirm={confirmRemove}
         onCancel={() => setPendingRemove(null)}
       />

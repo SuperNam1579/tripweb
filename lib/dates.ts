@@ -34,6 +34,13 @@ export function daySpan(startKey: string, endKey: string): number {
   return Math.round(ms / 86_400_000) + 1;
 }
 
+/** Days from today (UTC) to a date key. Negative if the date has passed. */
+export function daysUntil(dateKey: string): number {
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((fromDateKey(dateKey).getTime() - todayUTC) / 86_400_000);
+}
+
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",

@@ -19,7 +19,7 @@ import {
   generateMemberToken,
   generateOwnerToken,
 } from "@/lib/tokens";
-import { ACTIVITY_OPTIONS, REGION_OPTIONS } from "@/lib/votes";
+import { ACTIVITY_OPTIONS } from "@/lib/votes";
 
 const crewColorField = z
   .string()
@@ -33,6 +33,7 @@ const createTripSchema = z
   .object({
     name: z.string().trim().min(1, "Give the trip a name.").max(80, "Keep the name under 80 characters."),
     yourName: z.string().trim().min(1, "Tell the group your name.").max(40, "Keep the name under 40 characters."),
+    destination: z.string().trim().min(1, "Where's the trip going? Add a destination.").max(80, "Keep the destination under 80 characters."),
     color: crewColorField,
     durationDays: z.coerce.number().int().min(1, "The trip needs at least 1 day.").max(30, "Keep it under 30 days."),
     windowStart: z.string().regex(DATE_KEY_RE, "Pick a start date."),
@@ -58,6 +59,7 @@ export async function createTrip(
   const parsed = createTripSchema.safeParse({
     name: formData.get("name"),
     yourName: formData.get("yourName"),
+    destination: formData.get("destination"),
     color: formData.get("color"),
     durationDays: formData.get("durationDays"),
     windowStart: formData.get("windowStart"),
@@ -66,7 +68,7 @@ export async function createTrip(
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
-  const { name, yourName, color, durationDays, windowStart, windowEnd } = parsed.data;
+  const { name, yourName, destination, color, durationDays, windowStart, windowEnd } = parsed.data;
 
   const ownerToken = generateOwnerToken();
 
@@ -77,6 +79,7 @@ export async function createTrip(
       trip = await prisma.trip.create({
         data: {
           name,
+          destination,
           durationDays,
           windowStart: fromDateKey(windowStart),
           windowEnd: fromDateKey(windowEnd),
@@ -159,6 +162,93 @@ export async function joinTrip(
   }
 
   redirect(`/trip/${trip.id}`);
+}
+
+/* ————————————————— Edit my profile ————————————————— */
+
+const profileSchema = z.object({
+  displayName: z.string().trim().min(1, "Tell the group your name.").max(40, "Keep the name under 40 characters."),
+  color: crewColorField,
+});
+
+export async function updateMemberProfile(
+  tripId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = profileSchema.safeParse({
+    displayName: formData.get("displayName"),
+    color: formData.get("color"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const member = await getMember(tripId);
+  if (!member) return { error: "Your session expired. Open the join link again." };
+
+  try {
+    await prisma.member.update({
+      where: { id: member.id },
+      data: { displayName: parsed.data.displayName, color: parsed.data.color },
+    });
+  } catch (e) {
+    if (isUniqueViolation(e)) {
+      return { error: "Someone already has that colour. Choose another one." };
+    }
+    throw e;
+  }
+
+  revalidatePath(`/trip/${tripId}`, "layout");
+  return null;
+}
+
+/* ————————————————— Delete / leave a trip ————————————————— */
+
+/**
+ * Permanently delete a trip. Owner only — a member holding the trip id must
+ * never be able to nuke everyone else's plan. Cascades to members,
+ * availability, budgets and votes (see schema.prisma).
+ */
+export async function deleteTrip(tripId: string): Promise<ActionState> {
+  const trip = await getOwnerTrip(tripId);
+  if (!trip) return { error: "Only the trip owner can delete this trip." };
+
+  await prisma.trip.delete({ where: { id: tripId } });
+
+  const store = await cookies();
+  store.delete(ownerCookieName(tripId));
+  store.delete(memberCookieName(tripId));
+  return null;
+}
+
+/**
+ * Leave a trip you joined: removes only YOUR membership (and with it your
+ * availability, budget and votes). The trip itself lives on for everyone else.
+ */
+export async function leaveTrip(tripId: string): Promise<ActionState> {
+  const member = await getMember(tripId);
+  if (!member) return { error: "You're not in this trip on this device." };
+
+  await prisma.member.delete({ where: { id: member.id } });
+
+  const store = await cookies();
+  store.delete(memberCookieName(tripId));
+  return null;
+}
+
+/* ————————————————— Remove a member (owner only) ————————————————— */
+
+export async function removeMember(tripId: string, memberId: string): Promise<ActionState> {
+  const trip = await getOwnerTrip(tripId);
+  if (!trip) return { error: "Only the trip owner can do that." };
+
+  const member = await prisma.member.findUnique({ where: { id: memberId } });
+  if (!member || member.tripId !== tripId) return { error: "That member is already gone." };
+
+  // Cascades to their availability, budget, and votes (see schema.prisma).
+  await prisma.member.delete({ where: { id: memberId } });
+
+  revalidatePath(`/trip/${tripId}`, "layout");
+  return null;
 }
 
 /* ————————————————— Owner cookie claim ————————————————— */
@@ -261,10 +351,11 @@ export async function saveBudget(
 
 /* ————————————————— Votes ————————————————— */
 
-const voteSchema = z.union([
-  z.object({ category: z.literal("REGION"), value: z.enum(REGION_OPTIONS) }),
-  z.object({ category: z.literal("ACTIVITY"), value: z.enum(ACTIVITY_OPTIONS) }),
-]);
+// Region voting was removed — the app only ever records ACTIVITY votes now.
+const voteSchema = z.object({
+  category: z.literal("ACTIVITY"),
+  value: z.enum(ACTIVITY_OPTIONS),
+});
 
 export async function saveVote(
   tripId: string,
@@ -288,6 +379,56 @@ export async function saveVote(
       value: parsed.data.value,
     },
     update: { value: parsed.data.value },
+  });
+
+  revalidatePath(`/trip/${tripId}`, "layout");
+  return null;
+}
+
+/* ————————————————— Adjust trip dates (owner only) ————————————————— */
+
+const tripWindowSchema = z
+  .object({
+    durationDays: z.coerce.number().int().min(1, "The trip needs at least 1 day.").max(30, "Keep it under 30 days."),
+    windowStart: z.string().regex(DATE_KEY_RE, "Pick a start date."),
+    windowEnd: z.string().regex(DATE_KEY_RE, "Pick an end date."),
+  })
+  .refine((v) => v.windowEnd >= v.windowStart, {
+    message: "The window has to end after it starts.",
+    path: ["windowEnd"],
+  })
+  .refine((v) => daySpan(v.windowStart, v.windowEnd) >= v.durationDays, {
+    message: "The date window is shorter than the trip itself.",
+    path: ["windowEnd"],
+  })
+  .refine((v) => daySpan(v.windowStart, v.windowEnd) <= 180, {
+    message: "Keep the window under 6 months so the calendar stays usable.",
+    path: ["windowEnd"],
+  });
+
+export async function updateTripWindow(
+  tripId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const trip = await getOwnerTrip(tripId);
+  if (!trip) return { error: "Only the trip owner can do that." };
+
+  const parsed = tripWindowSchema.safeParse({
+    durationDays: formData.get("durationDays"),
+    windowStart: formData.get("windowStart"),
+    windowEnd: formData.get("windowEnd"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { durationDays, windowStart, windowEnd } = parsed.data;
+
+  await prisma.trip.update({
+    where: { id: tripId },
+    data: {
+      durationDays,
+      windowStart: fromDateKey(windowStart),
+      windowEnd: fromDateKey(windowEnd),
+    },
   });
 
   revalidatePath(`/trip/${tripId}`, "layout");

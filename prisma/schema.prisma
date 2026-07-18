@@ -10,6 +10,12 @@ datasource db {
 model Trip {
   id           String     @id @default(cuid())
   name         String
+  /**
+   * Free-text destination the owner sets at creation — city / province / island.
+   * Nullable only so pre-existing trips (created before this field) stay valid;
+   * new trips always set it (enforced in the createTrip action).
+   */
+  destination  String?
   ownerToken   String     @unique
   joinCode     String     @unique
   durationDays Int
@@ -85,6 +91,7 @@ enum TripStatus {
 }
 
 enum VoteCategory {
-  REGION
+  // The owner sets the destination directly, so ACTIVITY is the only thing the
+  // group votes on. (REGION was removed once its last dead rows were cleared.)
   ACTIVITY
 }

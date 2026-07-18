@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Crewmate } from "@/components/crewmate";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 const STEPS = [
   {
@@ -142,92 +143,98 @@ export default function Home() {
 
       {/* ————— How it works (task list) ————— */}
       <section className="mx-auto max-w-[1160px] px-6 pb-5 pt-8">
-        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-          <h2
-            className="font-bold text-[#F4F8FF]"
-            style={{ fontSize: "clamp(28px,4vw,46px)", textShadow: "0 2px 12px rgba(0,0,0,.4)" }}
-          >
-            ภารกิจของทีม
-          </h2>
-          <span className="text-[13px] uppercase tracking-[.14em] text-cyan">Tasks · 4 steps</span>
-        </div>
-        <div className="panel overflow-hidden">
-          <div className="panel-bar">
-            <span className="panel-dot bg-[#E23A3A]" />
-            <span className="panel-dot bg-[#F6F657]" />
-            <span className="panel-dot bg-[#4AC959]" />
-            <span className="ml-2 text-xs uppercase tracking-[.16em] text-[#8FA0BE]">Task List</span>
-          </div>
-          {STEPS.map((s) => (
-            <div
-              key={s.no}
-              className="flex items-center gap-5 px-5 py-[18px]"
-              style={{ borderBottom: "2px solid #131C2E" }}
+        <ScrollReveal>
+          <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+            <h2
+              className="font-bold text-[#F4F8FF]"
+              style={{ fontSize: "clamp(28px,4vw,46px)", textShadow: "0 2px 12px rgba(0,0,0,.4)" }}
             >
-              <span
-                className="grid h-[42px] w-[42px] flex-none place-items-center rounded-[11px] text-[17px] font-bold"
-                style={{
-                  background: "linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 50%),#4AC959",
-                  color: "#08210C",
-                  border: "2px solid #05070D",
-                  boxShadow: "0 3px 0 #2C8C39",
-                }}
-              >
-                ✓
-              </span>
-              <span className="w-[42px] flex-none text-[15px] font-semibold text-[#5E6E88]">{s.no}</span>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-[21px] font-semibold text-[#EEF3FB]">{s.title}</h3>
-                <p className="mt-0.5 text-[15px] text-[#93A2BC]">{s.desc}</p>
-              </div>
+              ภารกิจของทีม
+            </h2>
+            <span className="text-[13px] uppercase tracking-[.14em] text-cyan">Tasks · 4 steps</span>
+          </div>
+        </ScrollReveal>
+        <ScrollReveal delayMs={100}>
+          <div className="panel overflow-hidden">
+            <div className="panel-bar">
+              <span className="panel-dot bg-[#E23A3A]" />
+              <span className="panel-dot bg-[#F6F657]" />
+              <span className="panel-dot bg-[#4AC959]" />
+              <span className="ml-2 text-xs uppercase tracking-[.16em] text-[#8FA0BE]">Task List</span>
             </div>
-          ))}
-        </div>
+            {STEPS.map((s) => (
+              <div
+                key={s.no}
+                className="flex items-center gap-5 px-5 py-[18px]"
+                style={{ borderBottom: "2px solid #131C2E" }}
+              >
+                <span
+                  className="grid h-[42px] w-[42px] flex-none place-items-center rounded-[11px] text-[17px] font-bold"
+                  style={{
+                    background: "linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 50%),#4AC959",
+                    color: "#08210C",
+                    border: "2px solid #05070D",
+                    boxShadow: "0 3px 0 #2C8C39",
+                  }}
+                >
+                  ✓
+                </span>
+                <span className="w-[42px] flex-none text-[15px] font-semibold text-[#5E6E88]">{s.no}</span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[21px] font-semibold text-[#EEF3FB]">{s.title}</h3>
+                  <p className="mt-0.5 text-[15px] text-[#93A2BC]">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollReveal>
       </section>
 
       {/* ————— CTA band ————— */}
       <section className="mx-auto max-w-[1160px] px-6 py-12">
-        <div
-          className="relative overflow-hidden text-center"
-          style={{
-            background: "linear-gradient(135deg,#132ED1,#6B2FBB)",
-            border: "3px solid #05070D",
-            borderRadius: 28,
-            padding: "56px 34px",
-            boxShadow: "0 14px 0 rgba(0,0,0,.38),inset 0 0 0 2px rgba(255,255,255,.1),inset 0 3px 0 rgba(255,255,255,.16)",
-          }}
-        >
+        <ScrollReveal>
           <div
-            className="absolute inset-0"
-            style={{ background: "radial-gradient(600px 300px at 50% -10%,rgba(255,255,255,.14),transparent 70%)" }}
-          />
-          <div
-            className="bob2 absolute"
-            style={{ left: "5%", bottom: -8, width: 94, height: 112, transform: "rotate(-8deg)", filter: "drop-shadow(0 14px 12px rgba(0,0,0,.4))" }}
+            className="relative overflow-hidden text-center"
+            style={{
+              background: "linear-gradient(135deg,#132ED1,#6B2FBB)",
+              border: "3px solid #05070D",
+              borderRadius: 28,
+              padding: "56px 34px",
+              boxShadow: "0 14px 0 rgba(0,0,0,.38),inset 0 0 0 2px rgba(255,255,255,.1),inset 0 3px 0 rgba(255,255,255,.16)",
+            }}
           >
-            <Crewmate body="#F6F657" shade="#B0A020" />
+            <div
+              className="absolute inset-0"
+              style={{ background: "radial-gradient(600px 300px at 50% -10%,rgba(255,255,255,.14),transparent 70%)" }}
+            />
+            <div
+              className="bob2 absolute"
+              style={{ left: "5%", bottom: -8, width: 94, height: 112, transform: "rotate(-8deg)", filter: "drop-shadow(0 14px 12px rgba(0,0,0,.4))" }}
+            >
+              <Crewmate body="#F6F657" shade="#B0A020" />
+            </div>
+            <div
+              className="bob absolute"
+              style={{ right: "6%", top: -4, width: 80, height: 96, transform: "rotate(10deg)", filter: "drop-shadow(0 14px 12px rgba(0,0,0,.4))" }}
+            >
+              <Crewmate body="#50EF39" shade="#2F9E22" />
+            </div>
+            <p className="relative m-0 text-[13px] uppercase tracking-[.2em] text-[#B9E3FF]">Ready up</p>
+            <h2
+              className="relative mx-auto mt-3.5 font-bold text-white"
+              style={{ fontSize: "clamp(30px,5vw,56px)", lineHeight: 1.04, maxWidth: "20ch", textShadow: "0 2px 16px rgba(0,0,0,.4)" }}
+            >
+              พร้อมรวมทีมออกทริปหรือยัง?
+            </h2>
+            <Link
+              href="/create"
+              className="btn btn-green relative mt-7 px-9 py-[17px] text-[19px]"
+              style={{ borderRadius: 17, boxShadow: "0 8px 0 #2C8C39, inset 0 2px 0 rgba(255,255,255,.45)" }}
+            >
+              สร้างทริปเลย →
+            </Link>
           </div>
-          <div
-            className="bob absolute"
-            style={{ right: "6%", top: -4, width: 80, height: 96, transform: "rotate(10deg)", filter: "drop-shadow(0 14px 12px rgba(0,0,0,.4))" }}
-          >
-            <Crewmate body="#50EF39" shade="#2F9E22" />
-          </div>
-          <p className="relative m-0 text-[13px] uppercase tracking-[.2em] text-[#B9E3FF]">Ready up</p>
-          <h2
-            className="relative mx-auto mt-3.5 font-bold text-white"
-            style={{ fontSize: "clamp(30px,5vw,56px)", lineHeight: 1.04, maxWidth: "20ch", textShadow: "0 2px 16px rgba(0,0,0,.4)" }}
-          >
-            พร้อมรวมทีมออกทริปหรือยัง?
-          </h2>
-          <Link
-            href="/create"
-            className="btn btn-green relative mt-7 px-9 py-[17px] text-[19px]"
-            style={{ borderRadius: 17, boxShadow: "0 8px 0 #2C8C39, inset 0 2px 0 rgba(255,255,255,.45)" }}
-          >
-            สร้างทริปเลย →
-          </Link>
-        </div>
+        </ScrollReveal>
       </section>
 
       <footer style={{ borderTop: "2px solid #05070D" }}>

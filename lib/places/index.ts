@@ -1,31 +1,31 @@
-import { mockProvider } from "./mockProvider";
-import type { Place, PlacesProvider, SearchPlacesOptions } from "./types";
+import { googleProvider } from "./googleProvider";
+import type { Hotel, Place, PlacesProvider, SearchPlacesOptions, StayStyle } from "./types";
 
-export type { Place, SearchPlacesOptions } from "./types";
+export type { Hotel, Place, PriceRange, SearchPlacesOptions, StayStyle } from "./types";
 
 /**
- * The ONE entry point components may use. Swapping in googleProvider later
- * happens here and only here — zero changes in any UI component.
+ * The ONE entry point components may use. Swapping providers happens here and
+ * only here — no Places types leak into components.
+ *
+ * There is deliberately no offline/mock fallback: a mock can't honour the
+ * owner's free-text destination, so it would answer a Krabi trip with Chiang
+ * Mai places. Callers must handle a throw (missing key, quota, network) and
+ * say so — see the results page.
  */
-const provider: PlacesProvider = mockProvider;
-// Later: process.env.GOOGLE_PLACES_API_KEY ? googleProvider : mockProvider
+const provider: PlacesProvider = googleProvider;
 
 export function searchPlaces(
-  region: string,
+  destination: string,
   activity: string,
   opts?: SearchPlacesOptions,
 ): Promise<Place[]> {
-  return provider.searchPlaces(region, activity, opts);
+  return provider.searchPlaces(destination, activity, opts);
 }
 
-/**
- * Rough per-person THB cost for a day around a place, by Google price level.
- * Used only to attach a budget tier badge — never shown as a price.
- */
-export const PRICE_LEVEL_THB: Record<Place["priceLevel"], number> = {
-  0: 300,
-  1: 800,
-  2: 1800,
-  3: 3500,
-  4: 7000,
-};
+export function searchHotels(
+  destination: string,
+  style: StayStyle,
+  opts?: SearchPlacesOptions,
+): Promise<Hotel[]> {
+  return provider.searchHotels(destination, style, opts);
+}
